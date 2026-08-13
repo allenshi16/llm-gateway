@@ -1,0 +1,15 @@
+node_modules/
+dist/
+.next/
+out/
+test-results/
+playwright-report/
+*.tsbuildinfo
+.env
+.env.*
+!.env.example
+coverage/
+*.log
+.DS_Store
+packages/database/prisma/dev.db
+session-export.sanitized.json

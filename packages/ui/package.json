@@ -1,0 +1,10 @@
+{
+  "name": "@gateway/ui",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": { "types": "./src/index.tsx", "default": "./src/index.tsx" }, "./styles.css": "./src/styles.css" },
+  "types": "./src/index.tsx",
+  "scripts": { "build": "tsc -p tsconfig.json", "typecheck": "tsc -p tsconfig.json --noEmit" },
+  "dependencies": { "react": "19.1.0" }
+}

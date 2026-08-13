@@ -1,0 +1,12 @@
+{
+  "files": [],
+  "references": [
+    { "path": "packages/contracts" },
+    { "path": "packages/database" },
+    { "path": "packages/core" },
+    { "path": "apps/control-plane" },
+    { "path": "apps/edge" },
+    { "path": "apps/worker" },
+    { "path": "apps/console" }
+  ]
+}

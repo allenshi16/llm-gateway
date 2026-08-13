@@ -1,0 +1,534 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AccountStatus {
+  ACTIVE
+  SUSPENDED
+  DELETED
+}
+
+enum OrganizationStatus {
+  ACTIVE
+  SUSPENDED
+  CLOSED
+}
+
+enum WorkspaceEnvironment {
+  DEVELOPMENT
+  STAGING
+  PRODUCTION
+}
+
+enum MembershipRole {
+  OWNER
+  ADMIN
+  DEVELOPER
+  BILLING
+  VIEWER
+}
+
+enum ApiKeyStatus {
+  ACTIVE
+  REVOKED
+  EXPIRED
+}
+
+enum Region {
+  US
+  EU
+  APAC
+}
+
+enum RetentionMode {
+  ZERO
+  STANDARD
+}
+
+enum RouteApprovalStatus {
+  PENDING
+  APPROVED
+  SUSPENDED
+  REJECTED
+}
+
+enum BillingMode {
+  PREPAID
+  POSTPAID
+  INCLUDED
+  PROMOTIONAL
+  NON_BILLABLE
+}
+
+enum WalletStatus {
+  ACTIVE
+  FROZEN
+  CLOSED
+}
+
+enum ReservationStatus {
+  ACTIVE
+  CAPTURED
+  RELEASED
+  EXPIRED
+}
+
+enum RequestStatus {
+  ACCEPTED
+  RESERVED
+  DISPATCHING
+  STREAMING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+  USAGE_PENDING
+  RECONCILIATION_REQUIRED
+  SETTLED
+}
+
+enum AttemptStatus {
+  STARTED
+  SUCCEEDED
+  FAILED
+  CANCELLED
+  AMBIGUOUS
+}
+
+enum LedgerTransactionType {
+  CREDIT
+  RESERVATION_CAPTURE
+  REFUND
+  ADJUSTMENT
+  PROMOTIONAL_CREDIT
+  CHARGEBACK
+}
+
+enum LedgerEntryDirection {
+  DEBIT
+  CREDIT
+}
+
+enum OutboxStatus {
+  PENDING
+  PROCESSING
+  PROCESSED
+  FAILED
+}
+
+enum SubscriptionStatus {
+  INCOMPLETE
+  ACTIVE
+  PAST_DUE
+  PAUSED
+  CANCELLED
+}
+
+enum StripeExportStatus {
+  PENDING
+  EXPORTED
+  FAILED
+}
+
+model Account {
+  id           String        @id @default(uuid()) @db.Uuid
+  email        String        @unique
+  displayName  String?
+  status       AccountStatus @default(ACTIVE)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  memberships Membership[]
+  apiKeys      ApiKey[]      @relation("ApiKeyCreator")
+  auditEvents  AuditEvent[]
+}
+
+model Organization {
+  id                  String             @id @default(uuid()) @db.Uuid
+  name                String
+  slug                String             @unique
+  status              OrganizationStatus @default(ACTIVE)
+  billingEmail        String?
+  homeRegion          Region             @default(US)
+  stripeCustomerId    String?            @unique
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+  workspaces          Workspace[]
+  memberships         Membership[]
+  wallets             Wallet[]
+  requests            LogicalRequest[]
+  subscriptions       Subscription[]
+  stripeEvents        StripeWebhookEvent[]
+  stripeExports       StripeUsageExport[]
+  auditEvents         AuditEvent[]
+
+  @@index([status])
+}
+
+model Workspace {
+  id                       String               @id @default(uuid()) @db.Uuid
+  organizationId           String               @db.Uuid
+  name                     String
+  slug                     String
+  environment              WorkspaceEnvironment @default(DEVELOPMENT)
+  allowedRegion            Region
+  retentionMode            RetentionMode        @default(ZERO)
+  allowCrossRegionFallback Boolean              @default(false)
+  litellmTeamId            String?
+  projectionVersion        Int                  @default(0)
+  createdAt                DateTime             @default(now())
+  updatedAt                DateTime             @updatedAt
+  organization             Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  memberships              Membership[]
+  apiKeys                  ApiKey[]
+  entitlements             ModelEntitlement[]
+  requests                 LogicalRequest[]
+
+  @@unique([organizationId, slug])
+  @@index([organizationId, environment])
+}
+
+model Membership {
+  id             String         @id @default(uuid()) @db.Uuid
+  organizationId String         @db.Uuid
+  workspaceId    String?        @db.Uuid
+  accountId      String         @db.Uuid
+  role           MembershipRole
+  createdAt      DateTime       @default(now())
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  workspace      Workspace?     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  account        Account        @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, workspaceId, accountId])
+  @@index([accountId, organizationId])
+}
+
+model ApiKey {
+  id              String       @id @default(uuid()) @db.Uuid
+  workspaceId     String       @db.Uuid
+  createdById     String       @db.Uuid
+  name            String
+  keyPrefix       String       @unique
+  secretHash      String       @unique
+  status          ApiKeyStatus @default(ACTIVE)
+  expiresAt       DateTime?
+  revokedAt       DateTime?
+  lastUsedAt      DateTime?
+  rpmLimit        Int?
+  tpmLimit        Int?
+  concurrencyLimit Int?
+  ipAllowlist     String[]
+  allowedRoutes   String[]
+  createdAt       DateTime     @default(now())
+  workspace       Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy       Account      @relation("ApiKeyCreator", fields: [createdById], references: [id])
+  requests        LogicalRequest[]
+
+  @@index([workspaceId, status])
+}
+
+model ModelProduct {
+  id                 String             @id @default(uuid()) @db.Uuid
+  publicName         String             @unique
+  displayName        String
+  description        String?
+  defaultMaxOutputTokens Int
+  active             Boolean            @default(true)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  priceVersions      PriceVersion[]
+  routes             ProviderRoute[]
+  entitlements       ModelEntitlement[]
+  requests           LogicalRequest[]
+}
+
+model PriceVersion {
+  id                   String        @id @default(uuid()) @db.Uuid
+  modelProductId       String        @db.Uuid
+  version              Int
+  currency             String        @default("USD")
+  inputPerMillion      Decimal       @db.Decimal(20, 8)
+  outputPerMillion     Decimal       @db.Decimal(20, 8)
+  cacheReadPerMillion  Decimal       @default(0) @db.Decimal(20, 8)
+  cacheWritePerMillion Decimal       @default(0) @db.Decimal(20, 8)
+  reasoningPerMillion  Decimal       @default(0) @db.Decimal(20, 8)
+  requestFee           Decimal       @default(0) @db.Decimal(20, 8)
+  effectiveFrom        DateTime
+  effectiveTo          DateTime?
+  createdAt            DateTime      @default(now())
+  modelProduct         ModelProduct  @relation(fields: [modelProductId], references: [id], onDelete: Restrict)
+  requests             LogicalRequest[]
+
+  @@unique([modelProductId, version])
+  @@index([modelProductId, effectiveFrom, effectiveTo])
+}
+
+model ModelEntitlement {
+  id             String       @id @default(uuid()) @db.Uuid
+  workspaceId    String       @db.Uuid
+  modelProductId String       @db.Uuid
+  billingMode    BillingMode  @default(PREPAID)
+  enabled        Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  workspace      Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  modelProduct   ModelProduct @relation(fields: [modelProductId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, modelProductId])
+}
+
+model ProviderRoute {
+  id                   String              @id @default(uuid()) @db.Uuid
+  modelProductId       String              @db.Uuid
+  provider             String
+  providerModel        String
+  region               Region
+  endpoint              String
+  status               RouteApprovalStatus @default(PENDING)
+  resaleApproved       Boolean             @default(false)
+  dpaApproved          Boolean             @default(false)
+  securityApproved     Boolean             @default(false)
+  residencyApproved    Boolean             @default(false)
+  zeroRetention        Boolean             @default(false)
+  trainingOptOut       Boolean             @default(false)
+  priority             Int                 @default(100)
+  reviewExpiresAt      DateTime?
+  killSwitch           Boolean             @default(false)
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+  modelProduct         ModelProduct        @relation(fields: [modelProductId], references: [id], onDelete: Cascade)
+  attempts             ProviderAttempt[]
+
+  @@unique([modelProductId, provider, providerModel, region])
+  @@index([modelProductId, region, status, killSwitch])
+}
+
+model Wallet {
+  id               String       @id @default(uuid()) @db.Uuid
+  organizationId   String       @db.Uuid
+  currency         String       @default("USD")
+  availableBalance Decimal      @default(0) @db.Decimal(20, 8)
+  reservedBalance  Decimal      @default(0) @db.Decimal(20, 8)
+  status           WalletStatus @default(ACTIVE)
+  version          Int          @default(0)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  reservations     WalletReservation[]
+  ledgerEntries    LedgerEntry[]
+
+  @@unique([organizationId, currency])
+}
+
+model WalletReservation {
+  id             String            @id @default(uuid()) @db.Uuid
+  walletId       String            @db.Uuid
+  requestId      String            @unique @db.Uuid
+  amount         Decimal           @db.Decimal(20, 8)
+  capturedAmount Decimal           @default(0) @db.Decimal(20, 8)
+  status         ReservationStatus @default(ACTIVE)
+  expiresAt      DateTime
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  wallet         Wallet            @relation(fields: [walletId], references: [id], onDelete: Restrict)
+  request        LogicalRequest    @relation(fields: [requestId], references: [id], onDelete: Restrict)
+
+  @@index([walletId, status, expiresAt])
+}
+
+model LogicalRequest {
+  id                       String        @id @default(uuid()) @db.Uuid
+  organizationId           String        @db.Uuid
+  workspaceId              String        @db.Uuid
+  apiKeyId                 String        @db.Uuid
+  modelProductId           String        @db.Uuid
+  priceVersionId           String        @db.Uuid
+  billingMode              BillingMode
+  region                   Region
+  requestBodyDigest        String
+  inputTokenEstimate       Int
+  maximumOutputTokens      Int
+  maximumChargeUsd         Decimal       @db.Decimal(20, 8)
+  customerPriceSnapshot    Json
+  status                   RequestStatus @default(ACCEPTED)
+  clientDisconnectedAt     DateTime?
+  completedAt              DateTime?
+  createdAt                DateTime      @default(now())
+  updatedAt                DateTime      @updatedAt
+  organization             Organization  @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  workspace                Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  apiKey                   ApiKey        @relation(fields: [apiKeyId], references: [id], onDelete: Restrict)
+  modelProduct             ModelProduct  @relation(fields: [modelProductId], references: [id], onDelete: Restrict)
+  priceVersion             PriceVersion  @relation(fields: [priceVersionId], references: [id], onDelete: Restrict)
+  reservation              WalletReservation?
+  attempts                 ProviderAttempt[]
+  customerCharges          CustomerCharge[]
+
+  @@index([organizationId, createdAt])
+  @@index([workspaceId, status, createdAt])
+}
+
+model ProviderAttempt {
+  id              String        @id @default(uuid()) @db.Uuid
+  requestId       String        @db.Uuid
+  providerRouteId String?       @db.Uuid
+  provider        String
+  providerModel   String
+  region          Region
+  sequence        Int
+  status          AttemptStatus @default(STARTED)
+  providerRequestId String?
+  inputTokens     Int           @default(0)
+  outputTokens    Int           @default(0)
+  cacheReadTokens Int           @default(0)
+  cacheWriteTokens Int          @default(0)
+  reasoningTokens Int           @default(0)
+  providerCostUsd Decimal       @default(0) @db.Decimal(20, 8)
+  responseDelivered Boolean     @default(false)
+  errorCode       String?
+  startedAt       DateTime
+  completedAt     DateTime?
+  request         LogicalRequest @relation(fields: [requestId], references: [id], onDelete: Restrict)
+  providerRoute   ProviderRoute? @relation(fields: [providerRouteId], references: [id], onDelete: SetNull)
+
+  @@unique([requestId, sequence])
+  @@index([requestId, status])
+}
+
+model RawUsageEvent {
+  id            String   @id @default(uuid()) @db.Uuid
+  source        String
+  sourceEventId String
+  requestId     String   @db.Uuid
+  attemptId     String   @db.Uuid
+  payload       Json
+  receivedAt    DateTime @default(now())
+  processedAt   DateTime?
+  processingError String?
+
+  @@unique([source, sourceEventId])
+  @@index([requestId, receivedAt])
+}
+
+model CustomerCharge {
+  id             String        @id @default(uuid()) @db.Uuid
+  requestId      String        @db.Uuid
+  component      String
+  amountUsd      Decimal       @db.Decimal(20, 8)
+  billingMode    BillingMode
+  priceVersionId String        @db.Uuid
+  usageSnapshot  Json
+  createdAt      DateTime      @default(now())
+  request        LogicalRequest @relation(fields: [requestId], references: [id], onDelete: Restrict)
+
+  @@unique([requestId, component])
+}
+
+model LedgerTransaction {
+  id             String                @id @default(uuid()) @db.Uuid
+  organizationId String                @db.Uuid
+  type           LedgerTransactionType
+  idempotencyKey String                @unique
+  referenceType  String
+  referenceId    String
+  description    String
+  createdAt      DateTime              @default(now())
+  entries        LedgerEntry[]
+
+  @@index([organizationId, createdAt])
+}
+
+model LedgerEntry {
+  id            String               @id @default(uuid()) @db.Uuid
+  transactionId String               @db.Uuid
+  walletId      String               @db.Uuid
+  accountCode   String
+  direction     LedgerEntryDirection
+  amount        Decimal              @db.Decimal(20, 8)
+  currency      String               @default("USD")
+  createdAt     DateTime             @default(now())
+  transaction   LedgerTransaction    @relation(fields: [transactionId], references: [id], onDelete: Restrict)
+  wallet        Wallet               @relation(fields: [walletId], references: [id], onDelete: Restrict)
+
+  @@index([walletId, createdAt])
+  @@index([transactionId])
+}
+
+model OutboxEvent {
+  id            String       @id @default(uuid()) @db.Uuid
+  topic         String
+  aggregateType String
+  aggregateId   String
+  payload       Json
+  status        OutboxStatus @default(PENDING)
+  attempts      Int          @default(0)
+  availableAt   DateTime     @default(now())
+  lockedAt      DateTime?
+  lockedBy      String?
+  processedAt   DateTime?
+  lastError     String?
+  createdAt     DateTime     @default(now())
+
+  @@index([status, availableAt, createdAt])
+}
+
+model Subscription {
+  id                   String             @id @default(uuid()) @db.Uuid
+  organizationId       String             @db.Uuid
+  stripeSubscriptionId String             @unique
+  stripePriceId        String
+  status               SubscriptionStatus
+  currentPeriodEnd     DateTime?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  organization         Organization       @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+
+  @@index([organizationId, status])
+}
+
+model StripeWebhookEvent {
+  id             String       @id
+  organizationId String?      @db.Uuid
+  type           String
+  livemode       Boolean
+  payload        Json
+  receivedAt     DateTime     @default(now())
+  processedAt    DateTime?
+  processingError String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+}
+
+model StripeUsageExport {
+  id                String             @id @default(uuid()) @db.Uuid
+  organizationId    String             @db.Uuid
+  meterEventName    String
+  periodStart       DateTime
+  periodEnd         DateTime
+  amountUsd         Decimal            @db.Decimal(20, 8)
+  stripeIdentifier  String             @unique
+  status            StripeExportStatus @default(PENDING)
+  exportedAt        DateTime?
+  lastError         String?
+  createdAt         DateTime           @default(now())
+  organization      Organization       @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+
+  @@unique([organizationId, meterEventName, periodStart, periodEnd])
+}
+
+model AuditEvent {
+  id             String        @id @default(uuid()) @db.Uuid
+  organizationId String?       @db.Uuid
+  actorAccountId String?       @db.Uuid
+  action         String
+  targetType     String
+  targetId       String
+  metadata       Json
+  createdAt      DateTime      @default(now())
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  actor          Account?      @relation(fields: [actorAccountId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, createdAt])
+}

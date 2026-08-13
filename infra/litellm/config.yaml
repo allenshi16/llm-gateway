@@ -1,0 +1,12 @@
+model_list: []
+
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY
+  disable_spend_logs: true
+  disable_error_logs: true
+  disable_no_log_param: true
+
+litellm_settings:
+  set_verbose: false
+  json_logs: true
+  drop_params: true
