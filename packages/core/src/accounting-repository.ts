@@ -65,6 +65,33 @@ export async function releaseRequest(input: { requestId: string; organizationId:
   });
 }
 
+export interface ExpiredReservationSweep {
+  released: number;
+  failed: number;
+}
+
+export async function releaseExpiredReservations(limit = 100): Promise<ExpiredReservationSweep> {
+  const expired = await query<{ request_id: string; organization_id: string }>(
+    `SELECT wr.request_id, lr.organization_id
+     FROM wallet_reservations wr JOIN logical_requests lr ON lr.id=wr.request_id
+     WHERE wr.status='ACTIVE' AND wr.expires_at < now()
+     ORDER BY wr.expires_at
+     LIMIT $1`,
+    [limit]
+  );
+  let released = 0;
+  let failed = 0;
+  for (const row of expired.rows) {
+    try {
+      await releaseRequest({ requestId: row.request_id, organizationId: row.organization_id, reason: "reservation_expired" });
+      released += 1;
+    } catch {
+      failed += 1;
+    }
+  }
+  return { released, failed };
+}
+
 export interface SettleRequestInput {
   requestId: string; organizationId: string; usage: UsageUnits; priceSnapshot: PriceSnapshot; provider: { attemptId: string; model: string; region: string; costUsd: string; inputTokens: number; outputTokens: number };
 }
@@ -117,7 +144,7 @@ export async function settleRequest(input: SettleRequestInput): Promise<{ custom
     const attempt = await client.query<{ id: string }>(
       `UPDATE provider_attempts pa SET status='SUCCEEDED', input_tokens=$1, output_tokens=$2, provider_cost_usd=$3, response_delivered=true, completed_at=now()
        FROM logical_requests lr
-       WHERE pa.id=$4 AND pa.request_id=$5 AND lr.id=pa.request_id AND lr.organization_id=$6 AND pa.status='STARTED'
+       WHERE pa.id=$4 AND pa.request_id=$5 AND lr.id=pa.request_id AND lr.organization_id=$6 AND pa.status IN ('STARTED','AMBIGUOUS')
        RETURNING pa.id`,
       [input.provider.inputTokens, input.provider.outputTokens, input.provider.costUsd, input.provider.attemptId, input.requestId, input.organizationId]
     );
@@ -127,7 +154,7 @@ export async function settleRequest(input: SettleRequestInput): Promise<{ custom
       await client.query(`INSERT INTO ledger_transactions (id, organization_id, type, idempotency_key, reference_type, reference_id, description) VALUES ($1,$2,'RESERVATION_CAPTURE',$3,'LOGICAL_REQUEST',$4,'Customer logical request charge')`, [transactionId, input.organizationId, ledgerKey, input.requestId]);
       await client.query(`INSERT INTO ledger_entries (transaction_id, wallet_id, account_code, direction, amount) VALUES ($1,$2,'CUSTOMER_WALLET','DEBIT',$3)`, [transactionId, reservation.wallet_id, customerChargeUsd]);
     }
-    await client.query(`UPDATE wallets SET available_balance=available_balance+($1-$2), reserved_balance=reserved_balance-$1, version=version+1, updated_at=now() WHERE id=$3`, [reservation.amount, customerChargeUsd, reservation.wallet_id]);
+    await client.query(`UPDATE wallets SET available_balance=available_balance+($1::numeric-$2::numeric), reserved_balance=reserved_balance-$1::numeric, version=version+1, updated_at=now() WHERE id=$3`, [reservation.amount, customerChargeUsd, reservation.wallet_id]);
     await client.query(`UPDATE wallet_reservations SET captured_amount=$1,status='CAPTURED',updated_at=now() WHERE request_id=$2 AND status='ACTIVE'`, [customerChargeUsd, input.requestId]);
     await client.query(`UPDATE logical_requests SET status='SETTLED',completed_at=now(),updated_at=now() WHERE id=$1`, [input.requestId]);
     return { customerChargeUsd, providerCostUsd: input.provider.costUsd };

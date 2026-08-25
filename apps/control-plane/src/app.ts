@@ -2,8 +2,9 @@ import Fastify, { type FastifyInstance } from "fastify";
 import { Readable } from "node:stream";
 import { timingSafeEqual } from "node:crypto";
 import { z } from "zod";
-import { createApiKey, createOrganization, creditWalletFromPayment, createRateLimiter, loadConfig, recordStripeWebhookEvent, revokeApiKey, securityHeaders } from "@gateway/core";
+import { createApiKey, createOrganization, creditWalletFromPayment, createRateLimiter, loadConfig, reconcileUsageEvent, recordStripeWebhookEvent, revokeApiKey, securityHeaders } from "@gateway/core";
 import { query } from "@gateway/database";
+import { usageEventSchema } from "@gateway/contracts";
 import { createStripeClient } from "@gateway/core";
 import { registerAccountRoutes } from "./account-routes.js";
 
@@ -161,6 +162,39 @@ export function buildControlPlane(): FastifyInstance {
     } catch (error) {
       request.log.error({ err: error }, "organization creation failed");
       return reply.code(409).send({ error: "organization_creation_failed" });
+    }
+  });
+
+  app.post("/v1/internal/usage-events", async (request, reply) => {
+    if (!hasControlPlaneAdminToken(request)) return reply.code(401).send({ error: "control_plane_authentication_required" });
+    const parsed = usageEventSchema.safeParse(request.body);
+    if (!parsed.success) return reply.code(400).send({ error: "invalid_request", details: parsed.error.flatten() });
+    const event = parsed.data;
+    const lookup = await query<{
+      organization_id: string; input_per_million: string; output_per_million: string;
+      cache_read_per_million: string; cache_write_per_million: string; reasoning_per_million: string; request_fee: string;
+    }>(
+      `SELECT lr.organization_id, pv.input_per_million, pv.output_per_million, pv.cache_read_per_million, pv.cache_write_per_million, pv.reasoning_per_million, pv.request_fee
+       FROM logical_requests lr JOIN price_versions pv ON pv.id=lr.price_version_id WHERE lr.id=$1`,
+      [event.requestId]
+    );
+    const row = lookup.rows[0];
+    if (!row) return reply.code(404).send({ error: "request_not_found" });
+    try {
+      return await reconcileUsageEvent({
+        event,
+        organizationId: row.organization_id,
+        priceSnapshot: {
+          inputPerMillion: row.input_per_million,
+          outputPerMillion: row.output_per_million,
+          cacheReadPerMillion: row.cache_read_per_million,
+          cacheWritePerMillion: row.cache_write_per_million,
+          reasoningPerMillion: row.reasoning_per_million,
+          requestFee: row.request_fee
+        }
+      });
+    } catch (error) {
+      return reply.code(409).send({ error: error instanceof Error ? error.message : "reconcile_failed" });
     }
   });
 

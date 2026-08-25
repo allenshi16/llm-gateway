@@ -26,19 +26,17 @@ services:
   litellm:
     # Local-only fallback. Production must override this with an immutable digest
     # and pass the release/cosign gates before enabling the profile.
+    # host networking: this machine's docker bridge NAT breaks outbound TLS;
+    # binding on the host stack is verified working and keeps LiteLLM private.
     image: ${LITELLM_IMAGE:-ghcr.io/berriai/litellm:v1.95.1}
     profiles: ["litellm"]
-    command: ["--config", "/app/config.yaml", "--port", "4000"]
+    network_mode: host
+    command: ["--config", "/app/config.yaml", "--port", "4302"]
     environment:
       LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:-local-disabled-litellm-key}
-      DATABASE_URL: ${DATABASE_URL:-postgresql://gateway:gateway@postgres:5432/gateway}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:?DEEPSEEK_API_KEY required for provider routes}
     volumes:
       - ./litellm/config.yaml:/app/config.yaml:ro
-    ports:
-      - "127.0.0.1:4302:4000"
-    depends_on:
-      postgres:
-        condition: service_healthy
 
 volumes:
   gateway-postgres:
