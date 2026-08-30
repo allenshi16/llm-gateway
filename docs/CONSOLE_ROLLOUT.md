@@ -21,7 +21,7 @@ The new console is stateless UI. It holds no keys, no tokens, and no authority; 
 - `canary` — internal cookies/headers route a small group to the new console.
 - `new` — all console traffic to `apps/console-web`; the cutover state.
 
-The switch is evaluated by the edge/load balancer in front of the console hostname, not by the applications. Example cookie-based canary rule: request carrying `northstar_console=new` is sent to the new console; everyone else stays on the legacy console. Keep the legacy console deployable and dependency-pinned for the entire window in which a rollback could be needed.
+The switch is evaluated by the edge/load balancer in front of the console hostname, not by the applications. Example cookie-based canary rule: request carrying `maridian_console=new` is sent to the new console; everyone else stays on the legacy console. Keep the legacy console deployable and dependency-pinned for the entire window in which a rollback could be needed.
 
 ## Canary
 

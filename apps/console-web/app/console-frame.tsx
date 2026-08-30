@@ -7,7 +7,7 @@ import { Button, Card, Logo } from "@gateway/ui";
 
 export type WorkspaceMembership = { organization_id: string; workspace_id?: string; organization_name: string; workspace_name: string; role: string };
 export type ConsoleContext = { organizationId: string; workspaceId: string; organizationName: string; workspaceName: string; role: string };
-const WORKSPACE_STORAGE_KEY = "northstar_selected_workspace";
+const WORKSPACE_STORAGE_KEY = "maridian_selected_workspace";
 
 export function pickWorkspace(memberships: WorkspaceMembership[]): ConsoleContext | undefined {
   const selected = typeof window === "undefined" ? undefined : window.localStorage.getItem(WORKSPACE_STORAGE_KEY);

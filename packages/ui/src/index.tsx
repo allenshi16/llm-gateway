@@ -13,5 +13,5 @@ export function Badge({ children, tone = "neutral" }: PropsWithChildren<{ tone?:
 }
 
 export function Logo({ compact = false }: { compact?: boolean }) {
-  return <span className="ui-logo"><span className="ui-logo-mark">N</span>{compact ? null : <span>Northstar</span>}</span>;
+  return <span className="ui-logo"><span className="ui-logo-mark">M</span>{compact ? null : <span>Maridian</span>}</span>;
 }

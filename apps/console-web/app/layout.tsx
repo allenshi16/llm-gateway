@@ -3,7 +3,7 @@ import "./console.css";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
-export const metadata: Metadata = { title: { default: "Console", template: "%s · Northstar Console" }, robots: { index: false, follow: false } };
+export const metadata: Metadata = { title: { default: "Console", template: "%s · Maridian Console" }, robots: { index: false, follow: false } };
 
 export const dynamic = "force-dynamic";
 

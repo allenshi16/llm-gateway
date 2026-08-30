@@ -1,5 +1,5 @@
 export const brand = {
-  name: "Northstar Gateway",
+  name: "Maridian Gateway",
   tagline: "One calm control plane for every model route.",
   description: "OpenAI-compatible access to approved LLM providers with regional policy, spend controls, and an immutable commercial ledger.",
   colors: {
