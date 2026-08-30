@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { brand, publicNavigation } from "@gateway/brand";
 import { Badge, Button, Card, Logo } from "@gateway/ui";
+import { consoleLogInUrl } from "../lib/console-url";
 
-export default function HomePage() {
+export default async function HomePage() {
+  const signInUrl = await consoleLogInUrl();
   return <main className="marketing-shell">
-    <nav className="marketing-nav"><Logo /><div className="marketing-links">{publicNavigation.map((item) => <Link key={item.href} href={item.href}>{item.label}</Link>)}</div><div className="marketing-actions"><Link href={process.env.NEXT_PUBLIC_CONSOLE_URL ?? "http://localhost:4301/login"}>Sign in</Link><Button>Start building</Button></div></nav>
+    <nav className="marketing-nav"><Logo /><div className="marketing-links">{publicNavigation.map((item) => <Link key={item.href} href={item.href}>{item.label}</Link>)}</div><div className="marketing-actions"><Link href={signInUrl}>Sign in</Link><Button>Start building</Button></div></nav>
     <section className="hero"><div className="hero-copy"><Badge tone="signal">OpenAI-compatible gateway</Badge><h1>{brand.tagline}</h1><p>{brand.description} Ship with predictable spend, region-aware routing, and one API surface across DeepSeek, Qwen, Kimi, GLM, and more.</p><div className="hero-actions"><Button>Get your API key</Button><Link className="text-link" href="/platform">Explore the platform →</Link></div><div className="hero-proof"><span>Private by default</span><span>EU + US regions</span><span>Immutable billing</span></div></div><Card className="signal-panel"><div className="panel-kicker">ROUTE / HEALTH</div><div className="route-row"><span className="route-dot" /><strong>deepseek-chat</strong><Badge tone="positive">healthy</Badge></div><div className="route-chart"><i /><i /><i /><i /><i /><i /><i /><i /><i /></div><div className="panel-stats"><span><small>p95 latency</small><b>642ms</b></span><span><small>region</small><b>eu-west</b></span></div></Card></section>
     <section className="feature-grid"><Card><span className="feature-number">01</span><h2>One endpoint, approved routes.</h2><p>Give developers a familiar OpenAI-compatible API while your team controls models, regions, fallbacks, and provider approvals.</p></Card><Card><span className="feature-number">02</span><h2>Spend you can explain.</h2><p>Reservations, captures, releases, price snapshots, and append-only ledger entries keep usage and invoices aligned.</p></Card><Card><span className="feature-number">03</span><h2>Built for serious teams.</h2><p>Organizations, workspaces, RBAC, audit trails, and short-lived private dispatch assertions are part of the control plane.</p></Card></section>
     <footer className="marketing-footer"><Logo /><span>Model access without operational noise.</span><span>© 2026 Maridian Gateway</span></footer>
