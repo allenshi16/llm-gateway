@@ -15,7 +15,6 @@ export function middleware(request: Request) {
     "base-uri 'self'",
     "form-action 'self'",
     "frame-ancestors 'none'",
-    "upgrade-insecure-requests",
   ].join("; ");
 
   const requestHeaders = new Headers(request.headers);
