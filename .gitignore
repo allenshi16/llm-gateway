@@ -13,3 +13,7 @@ coverage/
 .DS_Store
 packages/database/prisma/dev.db
 session-export.sanitized.json
+.omo/
+.playwright-mcp/
+web-homepage.png
+*.tsbuildinfo
