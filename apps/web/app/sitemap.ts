@@ -25,6 +25,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${base}/blog/minimax-h3`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.8 },
     { url: `${base}/blog/best-chinese-models-2026`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.8 },
     { url: `${base}/blog/deepseek-vs-qwen`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.8 },
+    { url: `${base}/blog/gpt6-vs-chinese-llms`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.8 },
   ];
 
   return [...staticPages, ...modelPages, ...blogPages];

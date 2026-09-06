@@ -15,6 +15,16 @@ export const metadata: Metadata = {
 
 const articles = [
   {
+    slug: "/blog/gpt6-vs-chinese-llms",
+    title: "GPT-6 vs Chinese LLMs: Building a Multi-Model API Mix",
+    description:
+      "A routing framework for mixing GPT-6 with DeepSeek, Qwen and Kimi: where frontier models earn their cost, and how escalation tiers cut API bills.",
+    date: "2026-09-06",
+    category: "Routing Strategy",
+    readTime: "6 min",
+    tags: ["GPT-6", "Multi-Model", "Routing"],
+  },
+  {
     slug: "/blog/deepseek-vs-qwen",
     title: "DeepSeek vs Qwen (2026): Which Chinese LLM Should You Use?",
     description:
