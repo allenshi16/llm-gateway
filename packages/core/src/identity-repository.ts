@@ -12,6 +12,27 @@ export interface Mailer {
   send(message: MailMessage): Promise<void>;
 }
 
+export function resendMailer(input: { apiKey: string; from: string }): Mailer {
+  return {
+    async send(message: MailMessage): Promise<void> {
+      const response = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { authorization: `Bearer ${input.apiKey}`, "content-type": "application/json" },
+        body: JSON.stringify({ from: input.from, to: [message.toEmail], subject: message.subject, text: message.body })
+      });
+      if (!response.ok) throw new Error("Email delivery failed");
+    }
+  };
+}
+
+export function configuredMailer(environment: NodeJS.ProcessEnv = process.env): Mailer {
+  if (environment["NODE_ENV"] !== "production") return devMailer();
+  const apiKey = environment["RESEND_API_KEY"];
+  const from = environment["MAIL_FROM"];
+  if (!apiKey || !from) throw new Error("Production mailer is not configured");
+  return resendMailer({ apiKey, from });
+}
+
 export async function queueMail(message: MailMessage): Promise<void> {
   await query(`INSERT INTO outbound_mails (to_email, subject, body, provider) VALUES ($1,$2,$3,'dev')`, [message.toEmail, message.subject, message.body]);
 }

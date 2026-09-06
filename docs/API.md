@@ -7,7 +7,7 @@
 
 ### Customer identity and sessions
 
-- `POST /v1/auth/register` — creates an account with an scrypt password hash.
+- `POST /v1/auth/register` — creates an account with an scrypt password hash. When `INVITE_ONLY=true`, the request must include an `inviteToken` for the same email; the account is added to the invitation's organization/workspace atomically.
 - `POST /v1/auth/login` — issues an HttpOnly DB-backed session cookie.
 - `POST /v1/auth/logout` — destroys the session.
 - `GET /v1/auth/me` — returns the current account, email-verification state, and its memberships.
@@ -16,6 +16,8 @@
 - `POST /v1/auth/request-password-reset` — issues a reset token and queues mail (does not reveal whether the account exists).
 - `POST /v1/auth/reset-password` — consumes the token and sets a new scrypt password hash.
 - Login/register are rate limited per IP+email to slow brute force.
+
+When invite-only mode rejects registration, it returns `403 invitation_required`, `400 invalid_invitation`, or `400 invite_email_mismatch`.
 
 ### Self-serve organization and RBAC
 
@@ -43,7 +45,8 @@
 ### Platform bootstrap (requires `CONTROL_PLANE_ADMIN_TOKEN`)
 
 - `POST /v1/organizations`
-- `POST /v1/api-keys`
+- `POST /v1/api-keys` — issues a first-party key; optional `rpmLimit`/`tpmLimit` set per-key request and token limits.
+- `PATCH /v1/workspaces/:workspaceId/api-keys/:keyId/limits` — set or clear per-key `rpmLimit`/`tpmLimit` (`null` clears the limit).
 - `POST /v1/workspaces/:workspaceId/api-keys/:keyId/revoke`
 - `GET /v1/workspaces/:workspaceId/api-keys`
 - `GET /v1/workspaces/:workspaceId/models`
@@ -51,6 +54,11 @@
 - `GET /v1/organizations/:organizationId/billing`
 - `GET /v1/admin/billing/plans` — list billing plans.
 - `PUT /v1/admin/billing/plans/:planId` — set `stripePriceId`, `unitAmountCents`, or `active`.
+- `POST /v1/admin/organizations/:organizationId/promotional-credit` — grant an idempotent, append-only trial credit with `{ "amountUsd": "5.00", "sourceEventId": "trial-..." }`.
+- `PATCH /v1/admin/organizations/:organizationId/status` — suspend or restore an organization with `{ "status": "SUSPENDED" | "ACTIVE" }`.
+- `PATCH /v1/admin/accounts/:accountId/status` — suspend or restore an account with `{ "status": "SUSPENDED" | "ACTIVE" }`.
+- `POST /v1/admin/workspaces/:workspaceId/model-entitlements` — enable an approved US model route for a Workspace; requires `{ "modelPublicName": "deepseek-chat", "billingMode": "PREPAID" }`.
+- `DELETE /v1/admin/workspaces/:workspaceId/model-entitlements/:modelProductId` — disable a Workspace model entitlement without deleting its history.
 
 ## Security hardening
 
@@ -65,6 +73,7 @@
 - `GET /ready` verifies configuration and PostgreSQL connectivity; it returns `503` when the service must not receive traffic.
 - `POST /v1/chat/completions`
   - Requires a first-party Bearer key.
+  - Per-key `rpm_limit` and `tpm_limit` are enforced against a trailing 60-second window of the request journal; TPM counts worst-case reserved tokens (input estimate plus maximum output). Exceeding either returns `429 key_rate_limited` with `Retry-After: 60` before any model, journal, or wallet work.
   - Resolves workspace entitlement and an approved provider-model-region route.
   - With `EDGE_ENABLE_DISPATCH=false` (the default), admission stops with `402 wallet_authorization_required`.
   - With dispatch explicitly enabled, writes the request journal and wallet reservation before calling the private LiteLLM endpoint.
@@ -76,8 +85,8 @@
 
 - The worker claims configured outbox topics with PostgreSQL `FOR UPDATE SKIP LOCKED`.
 - Successful handlers mark events `PROCESSED`; failures use exponential retry and eventually `DEAD` after the configured attempt limit.
-- No topic handler is registered by default yet, so this is a reliable polling primitive rather than a complete usage-settlement worker.
-- Validated LiteLLM usage events can be ingested through the runtime schema boundary and recorded idempotently in `raw_usage_events`; final settlement handlers must still reconcile them against the logical request and provider attempt before capture.
+- No topic handler is registered by default yet, so the outbox remains a reliable polling primitive rather than a complete usage-settlement worker.
+- Validated LiteLLM usage events can be ingested through the runtime schema boundary and recorded idempotently in `raw_usage_events`. The worker sweep settles late successful events, releases reservations for failed events, and marks each event processed; events that can never settle (for example, an already-released reservation) are finalized with a `processing_error` for manual review instead of being retried forever.
 
 ## Stripe
 

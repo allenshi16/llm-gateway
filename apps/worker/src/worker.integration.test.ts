@@ -31,4 +31,21 @@ describe.skipIf(!integrationEnabled)("postgres outbox worker", () => {
     expect(result.rows[0]).toMatchObject({ status: "RETRY", attempts: 1, last_error: "expected failure" });
     await query(`DELETE FROM outbox_events WHERE id=$1`, [eventId]);
   });
+
+  it("recovers an abandoned processing event before claiming work", async () => {
+    const eventId = randomUUID();
+    await query(
+      `INSERT INTO outbox_events (id, topic, aggregate_type, aggregate_id, payload, status, locked_at, locked_by)
+       VALUES ($1,'integration.recovery','test',$2,'{}'::jsonb,'PROCESSING',now() - interval '10 minutes','dead-worker')`,
+      [eventId, eventId]
+    );
+    const handler = vi.fn(async () => undefined);
+    const worker = createOutboxWorker({ workerId: `integration-${eventId}`, handlers: { "integration.recovery": handler }, lockTimeoutMs: 60_000 });
+
+    await expect(worker.runOnce()).resolves.toBe(1);
+    expect(handler).toHaveBeenCalledOnce();
+    const result = await query<{ status: string; locked_by: string | null }>(`SELECT status, locked_by FROM outbox_events WHERE id=$1`, [eventId]);
+    expect(result.rows[0]).toEqual({ status: "PROCESSED", locked_by: null });
+    await query(`DELETE FROM outbox_events WHERE id=$1`, [eventId]);
+  });
 });

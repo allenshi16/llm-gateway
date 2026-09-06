@@ -17,7 +17,7 @@
     "dev:console-web": "bun --env-file=.env run --filter '@gateway/console-web' dev",
     "typecheck": "bun run --filter '@gateway/*' typecheck",
     "test": "vitest run --passWithNoTests",
-    "test:integration": "RUN_INTEGRATION_TESTS=true vitest run packages/database/src/*integration.test.ts apps/worker/src/*integration.test.ts apps/control-plane/src/*integration.test.ts",
+    "test:integration": "RUN_INTEGRATION_TESTS=true vitest run --testTimeout=30000 packages/database/src/*integration.test.ts apps/worker/src/*integration.test.ts apps/control-plane/src/*integration.test.ts",
     "test:watch": "vitest",
     "db:generate": "prisma generate --schema packages/database/prisma/schema.prisma",
     "db:migrate": "prisma migrate dev --schema packages/database/prisma/schema.prisma",

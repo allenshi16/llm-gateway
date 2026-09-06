@@ -1,0 +1,53 @@
+- main [ref=f1e2]:
+  - navigation [ref=f1e3]:
+    - generic [ref=f1e4]:
+      - generic [ref=f1e5]: "N"
+      - generic [ref=f1e6]: Northstar
+    - generic [ref=f1e7]:
+      - link "Sign in" [ref=f1e8] [cursor=pointer]:
+        - /url: http://localhost:4301/login
+      - button "Start building" [ref=f1e9] [cursor=pointer]
+  - generic [ref=f1e10]:
+    - generic [ref=f1e11]:
+      - generic [ref=f1e12]: OpenAI-compatible gateway
+      - heading "One calm control plane for every model route." [level=1] [ref=f1e13]
+      - paragraph [ref=f1e14]: OpenAI-compatible access to approved LLM providers with regional policy, spend controls, and an immutable commercial ledger. Ship with predictable spend, region-aware routing, and one API surface across DeepSeek, Qwen, Kimi, GLM, and more.
+      - generic [ref=f1e15]:
+        - button "Get your API key" [ref=f1e16] [cursor=pointer]
+        - link "Explore the platform →" [ref=f1e17] [cursor=pointer]:
+          - /url: /platform
+      - generic [ref=f1e18]:
+        - generic [ref=f1e19]: Private by default
+        - generic [ref=f1e20]: EU + US regions
+        - generic [ref=f1e21]: Immutable billing
+    - generic [ref=f1e22]:
+      - generic [ref=f1e23]: ROUTE / HEALTH
+      - generic [ref=f1e24]:
+        - strong [ref=f1e26]: deepseek-chat
+        - generic [ref=f1e27]: healthy
+      - generic [ref=f1e38]:
+        - generic [ref=f1e39]:
+          - generic [ref=f1e40]: p95 latency
+          - generic [ref=f1e41]: 642ms
+        - generic [ref=f1e42]:
+          - generic [ref=f1e43]: region
+          - generic [ref=f1e44]: eu-west
+  - generic [ref=f1e45]:
+    - generic [ref=f1e46]:
+      - text: "01"
+      - heading "One endpoint, approved routes." [level=2] [ref=f1e47]
+      - paragraph [ref=f1e48]: Give developers a familiar OpenAI-compatible API while your team controls models, regions, fallbacks, and provider approvals.
+    - generic [ref=f1e49]:
+      - text: "02"
+      - heading "Spend you can explain." [level=2] [ref=f1e50]
+      - paragraph [ref=f1e51]: Reservations, captures, releases, price snapshots, and append-only ledger entries keep usage and invoices aligned.
+    - generic [ref=f1e52]:
+      - text: "03"
+      - heading "Built for serious teams." [level=2] [ref=f1e53]
+      - paragraph [ref=f1e54]: Organizations, workspaces, RBAC, audit trails, and short-lived private dispatch assertions are part of the control plane.
+  - generic [ref=f1e55]:
+    - generic [ref=f1e56]:
+      - generic [ref=f1e57]: "N"
+      - generic [ref=f1e58]: Northstar
+    - generic [ref=f1e59]: Model access without operational noise.
+    - generic [ref=f1e60]: © 2026 Northstar Gateway

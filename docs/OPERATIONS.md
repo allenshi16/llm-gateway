@@ -52,6 +52,7 @@
 ## Rate limiting and security headers
 
 - The control plane and console apply a site-wide per-IP sliding-window limit; tune `CONTROL_PLANE_RATE_LIMIT` and `CONSOLE_RATE_LIMIT` behind a load balancer (which usually sees a single proxy IP, so prefer the proxy's forwarded header).
+- Per-key `rpm_limit`/`tpm_limit` on `api_keys` are enforced at the Edge against the request journal's trailing 60-second window; TPM uses worst-case reserved tokens. Limits are nullable — `NULL` means unlimited — and are managed through the admin key APIs.
 - All responses include CSP, `nosniff`, frame denial, and no-referrer headers. CSP `script-src 'unsafe-inline'` is present only because the console inlines its scripts; move them to external assets before production if a stricter policy is required.
 - `429 too_many_requests` from the site limiter is intentional; check the limiter configuration before treating it as an incident.
 

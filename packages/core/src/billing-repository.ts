@@ -12,6 +12,48 @@ export interface WalletCreditInput {
   actorId?: string | null;
 }
 
+export interface PromotionalCreditInput {
+  organizationId: string;
+  amountUsd: string;
+  sourceEventId: string;
+  actorId?: string | null;
+}
+
+export async function grantPromotionalCredit(input: PromotionalCreditInput): Promise<{ credited: boolean; ledgerTransactionId: string | null }> {
+  const result = await withTransaction(async (client) => {
+    const idempotencyKey = `promotional:${input.sourceEventId}`;
+    const existing = await client.query<{ id: string; organization_id: string }>(`SELECT id, organization_id FROM ledger_transactions WHERE idempotency_key=$1`, [idempotencyKey]);
+    if (existing.rows[0]) {
+      if (existing.rows[0].organization_id !== input.organizationId) throw new Error("Promotional credit source conflicts with another organization");
+      return { credited: false, ledgerTransactionId: existing.rows[0].id };
+    }
+
+    const wallet = await client.query<{ id: string }>(`SELECT id FROM wallets WHERE organization_id=$1 AND currency='USD' AND status='ACTIVE' FOR UPDATE`, [input.organizationId]);
+    const walletId = wallet.rows[0]?.id;
+    if (!walletId) throw new Error("Wallet not found");
+
+    const transactionId = randomUUID();
+    await client.query(
+      `INSERT INTO ledger_transactions (id, organization_id, type, idempotency_key, reference_type, reference_id, description)
+       VALUES ($1,$2,'PROMOTIONAL_CREDIT',$3,'PROMOTION',$4,'Trial promotional credit')`,
+      [transactionId, input.organizationId, idempotencyKey, input.sourceEventId]
+    );
+    await client.query(
+      `INSERT INTO ledger_entries (transaction_id, wallet_id, account_code, direction, amount)
+       VALUES ($1,$2,'CUSTOMER_WALLET','CREDIT',$3)`,
+      [transactionId, walletId, input.amountUsd]
+    );
+    const updated = await client.query(
+      `UPDATE wallets SET available_balance=available_balance+$1, version=version+1, updated_at=now() WHERE id=$2 AND status='ACTIVE'`,
+      [input.amountUsd, walletId]
+    );
+    if (updated.rowCount !== 1) throw new Error("Wallet credit failed");
+    return { credited: true, ledgerTransactionId: transactionId };
+  });
+  await recordAudit({ organizationId: input.organizationId, accountId: input.actorId ?? null, actorId: input.actorId ?? null, action: "billing.promotional_credit", resourceType: "promotion", resourceId: input.sourceEventId, metadata: { amountUsd: input.amountUsd, currency: "USD" } });
+  return result;
+}
+
 export async function creditWalletFromPayment(input: WalletCreditInput): Promise<{ credited: boolean; ledgerTransactionId: string | null }> {
   return withTransaction(async (client) => {
     const projection = await client.query<{ id: string; ledger_transaction_id: string | null }>(

@@ -1,0 +1,49 @@
+- main [ref=f3e2]:
+  - generic [ref=f3e3]:
+    - generic [ref=f3e4]:
+      - heading "LLM Gateway" [level=1] [ref=f3e5]
+      - paragraph [ref=f3e6]: Multi-tenant LLM API management, billing and key control.
+    - generic [ref=f3e15]:
+      - text: e2e1787992361769@test.local
+      - generic [ref=f3e16]:
+        - text: unverified ·
+        - link "verify" [ref=f3e57] [cursor=pointer]:
+          - /url: "#"
+      - button "Sign out" [ref=f3e18] [cursor=pointer]
+  - generic [ref=f3e19]:
+    - generic [ref=f3e20]:
+      - generic [ref=f3e21]:
+        - heading "Create organization" [level=2] [ref=f3e22]
+        - textbox "Organization name" [ref=f3e23]: Test Org
+        - textbox "organization-slug" [ref=f3e24]: test-org-e2e
+        - textbox "Workspace name" [ref=f3e25]: Default Workspace
+        - textbox "workspace-slug" [ref=f3e26]: default
+        - button "Create" [ref=f3e27] [cursor=pointer]
+      - generic [ref=f3e28]:
+        - heading "Your access" [level=2] [ref=f3e29]
+        - button "Test Org" [ref=f3e58] [cursor=pointer]
+    - generic [ref=f3e33]:
+      - heading "API keys" [level=2] [ref=f3e34]
+      - textbox "Key name" [ref=f3e35]
+      - combobox [ref=f3e36]:
+        - option "test" [selected]
+        - option "live"
+      - button "Create key" [ref=f3e37] [cursor=pointer]
+    - generic [ref=f3e38]:
+      - heading "Models" [level=2] [ref=f3e40]
+      - heading "Usage" [level=2] [ref=f3e42]
+      - generic [ref=f3e43]:
+        - heading "Billing" [level=2] [ref=f3e44]
+        - generic [ref=f3e45]:
+          - spinbutton "USD amount" [ref=f3e46]
+          - button "Add credit (dev)" [ref=f3e47] [cursor=pointer]
+    - generic [ref=f3e48]:
+      - heading "Members" [level=2] [ref=f3e49]
+      - generic [ref=f3e50]:
+        - textbox "member@example.com" [ref=f3e51]
+        - combobox [ref=f3e52]:
+          - option "MEMBER" [selected]
+          - option "ADMIN"
+        - button "Invite" [ref=f3e53] [cursor=pointer]
+    - heading "Audit log" [level=2] [ref=f3e55]
+    - paragraph [ref=f3e56]: not_found

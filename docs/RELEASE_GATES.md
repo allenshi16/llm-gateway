@@ -27,7 +27,7 @@ The repository does not silently substitute a digest when registry metadata and 
 
 Before setting `EDGE_ENABLE_DISPATCH=true`, run the private sandbox against an approved provider-model-region route and retain evidence for:
 
-The basic probe can be started with `EDGE_BASE_URL=... GATEWAY_API_KEY=... ./scripts/provider-sandbox.sh`; the failure, timeout, usage, callback, and tenant-isolation cases must be executed by the staging test harness.
+The basic probe can be started with `EDGE_BASE_URL=... GATEWAY_API_KEY=... ./scripts/provider-sandbox.sh`; it targets `deepseek-chat` by default and accepts `SANDBOX_MODEL=...` for another approved route. The failure, timeout, usage, callback, and tenant-isolation cases must be executed by the staging test harness.
 
 1. Successful non-streaming response with valid usage.
 2. Provider HTTP failure and full reservation release.
@@ -60,6 +60,8 @@ Notes: scenario-1/2/4 used deterministic local mock provider fixtures (`mock-ech
 | Expired reservation sweep | `releaseExpiredReservations()`: 8 ACTIVE reservations released in worker first poll; all funds returned; conservation maintained |
 | Late-callback reconciliation | `POST /v1/internal/usage-events` (admin-token protected): accepted+settled for AMBIGUOUS attempt; duplicate returns `accepted:false,settled:true`; FAILED callback triggers release |
 | Root-cause fix (network) | OpenSSL 3.2 TLS 1.3 stalls on MTU≤1428 paths + litellm inherited dead proxy; fixed via `OPENSSL_CONF` (TLS 1.2 max) + proxy env strip; machine-specific, production unaffected |
+
+Note (2026-09-02): customer-charge amounts in the evidence tables above were produced by a pricing formatter bug that understated the fractional USD portion by 100x. Wallet conservation evidence remains valid, but absolute charge magnitudes in these records are understated. The formatter is fixed and now pinned by exact-value unit tests; re-run sandbox scenarios against the fixed build before production promotion.
 
 ## Streaming gate
 

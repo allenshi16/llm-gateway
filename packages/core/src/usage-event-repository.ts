@@ -10,6 +10,13 @@ export async function recordRawUsageEvent(event: UsageEvent): Promise<boolean> {
   return result.rowCount === 1;
 }
 
+export async function finalizeRawUsageEvent(id: string, processingError: string | null): Promise<void> {
+  await query(
+    `UPDATE raw_usage_events SET processed_at=now(), processing_error=$2 WHERE id=$1`,
+    [id, processingError]
+  );
+}
+
 export async function ingestRawUsageEvent(input: unknown): Promise<{ accepted: boolean; event: UsageEvent }> {
   const parsed = usageEventSchema.safeParse(input);
   if (!parsed.success) throw new Error("Invalid usage event");

@@ -1,7 +1,7 @@
 import Fastify, { type FastifyInstance } from "fastify";
 import { createHash, randomUUID } from "node:crypto";
 import { chatCompletionRequestSchema } from "@gateway/contracts";
-import { acceptAndReserveRequest, authenticateApiKey, calculateCustomerCharge, createRateLimiter, finishProviderAttempt, loadConfig, releaseRequest, resolveModelAccess, securityHeaders, settleRequest, signInternalAssertion, startProviderAttempt } from "@gateway/core";
+import { acceptAndReserveRequest, authenticateApiKey, calculateCustomerCharge, createRateLimiter, evaluateKeyRateLimit, finishProviderAttempt, keyRateWindow, loadConfig, releaseRequest, resolveModelAccess, securityHeaders, settleRequest, signInternalAssertion, startProviderAttempt } from "@gateway/core";
 import { query } from "@gateway/database";
 import { parseProviderUsage } from "./provider-response.js";
 import { dispatchProvider } from "./provider-transport.js";
@@ -46,6 +46,11 @@ export function buildEdge(): FastifyInstance {
     if (!pepper) return reply.code(503).send({ error: "key_service_unconfigured" });
     const key = await authenticateApiKey(secret, pepper);
     if (!key) return reply.code(401).send({ error: "invalid_api_key" });
+    if (!key.emailVerified) return reply.code(403).send({ error: "email_verification_required" });
+    const rateWindow = key.rpmLimit !== null || key.tpmLimit !== null ? await keyRateWindow(key.id) : null;
+    if (rateWindow && key.rpmLimit !== null && rateWindow.requests >= key.rpmLimit) {
+      return reply.code(429).header("retry-after", "60").send({ error: "key_rate_limited" });
+    }
     const config = loadConfig();
     const parsed = chatCompletionRequestSchema.safeParse(request.body);
     if (!parsed.success) return reply.code(400).send({ error: "invalid_request", details: parsed.error.flatten() });
@@ -66,6 +71,9 @@ export function buildEdge(): FastifyInstance {
       const requestId = randomUUID();
       const estimate = inputTokenEstimate(parsed.data);
       const maximumOutputTokens = Math.min(parsed.data.max_completion_tokens ?? parsed.data.max_tokens ?? access.maximumOutputTokens, access.maximumOutputTokens);
+      if (rateWindow && key.tpmLimit !== null && !evaluateKeyRateLimit({ limits: { rpmLimit: null, tpmLimit: key.tpmLimit }, window: rateWindow, inputTokenEstimate: estimate, maximumOutputTokens }).allowed) {
+        return reply.code(429).header("retry-after", "60").send({ error: "key_rate_limited" });
+      }
       const maximumChargeUsd = calculateCustomerCharge(access.price, { inputTokens: estimate, outputTokens: maximumOutputTokens });
       const bodyDigest = digestBody(parsed.data);
       await acceptAndReserveRequest({

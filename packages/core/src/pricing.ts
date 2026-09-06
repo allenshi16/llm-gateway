@@ -33,6 +33,6 @@ export function calculateCustomerCharge(snapshot: PriceSnapshot, usage: UsageUni
 
 function formatMicros(value: bigint, divisor: bigint): string {
   const whole = value / divisor;
-  const fraction = (value % divisor).toString().padStart(16, "0").slice(0, 8).replace(/0+$/, "");
+  const fraction = ((value % divisor) * 100_000_000n / divisor).toString().padStart(8, "0").replace(/0+$/, "");
   return fraction.length === 0 ? whole.toString() : `${whole}.${fraction}`;
 }

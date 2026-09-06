@@ -34,6 +34,7 @@ docker-compose -f infra/docker-compose.yml --profile litellm up -d litellm
 - Local PostgreSQL and Redis ports are bound to loopback only; production deployments must keep both services on private networks without public listener ports.
 - Configure load balancers to route only to instances whose `/ready` endpoint returns `200`; `/health` is liveness only.
 - Set a random API-key pepper and internal assertion secret through a KMS-backed secret manager.
+- Set `INVITE_ONLY=true` for the initial external trial and distribute invitations only through authenticated organization-admin workflows; keep it `false` for local development.
 - Set a separate random `CONTROL_PLANE_ADMIN_TOKEN` through the same secret manager; never expose control-plane mutation endpoints without this gate.
 - Use separate US/EU PostgreSQL, Redis, queues, secrets, and LiteLLM deployments when residency isolation is required.
 - Run `bun run test`, strict workspace builds, contract tests, failure injection, provider sandbox tests, and a canary before promotion.

@@ -15,18 +15,35 @@ export interface SessionContext {
   account: AccountContext;
 }
 
-export async function registerAccount(input: { email: string; password: string; displayName?: string }): Promise<{ accountId: string; email: string }> {
+export async function registerAccount(input: { email: string; password: string; displayName?: string; inviteToken?: string }): Promise<{ accountId: string; email: string }> {
   const email = input.email.trim().toLowerCase();
   if (input.password.length < 8) throw new Error("Password must be at least 8 characters");
   const passwordHash = hashPassword(input.password);
-  const result = await query<{ id: string }>(
-    `INSERT INTO accounts (email, display_name, password_hash) VALUES ($1,$2,$3)
-     ON CONFLICT (email) DO NOTHING RETURNING id`,
-    [email, input.displayName?.trim() || null, passwordHash]
-  );
-  const row = result.rows[0];
-  if (!row) throw new Error("Account already exists");
-  return { accountId: row.id, email };
+  return withTransaction(async (client) => {
+    const result = await client.query<{ id: string }>(
+      `INSERT INTO accounts (email, display_name, password_hash) VALUES ($1,$2,$3)
+       ON CONFLICT (email) DO NOTHING RETURNING id`,
+      [email, input.displayName?.trim() || null, passwordHash]
+    );
+    const row = result.rows[0];
+    if (!row) throw new Error("Account already exists");
+    if (!input.inviteToken) return { accountId: row.id, email };
+
+    const invites = await client.query<{ id: string; organization_id: string; workspace_id: string | null; email: string; role: string; token_hash: string }>(
+      `SELECT id, organization_id, workspace_id, email, role, token_hash FROM org_invites WHERE status='PENDING' AND expires_at > now() FOR UPDATE`,
+      []
+    );
+    const invite = invites.rows.find((candidate) => verifyPassword(input.inviteToken ?? "", candidate.token_hash));
+    if (!invite) throw new Error("Invalid invitation");
+    if (invite.email !== email) throw new Error("Invite email does not match account");
+    await client.query(
+      `INSERT INTO memberships (organization_id, workspace_id, account_id, role) VALUES ($1,$2,$3,$4)`,
+      [invite.organization_id, invite.workspace_id, row.id, invite.role]
+    );
+    const consumed = await client.query(`UPDATE org_invites SET status='ACCEPTED', accepted_at=now() WHERE id=$1 AND status='PENDING'`, [invite.id]);
+    if (consumed.rowCount !== 1) throw new Error("Invitation is no longer available");
+    return { accountId: row.id, email };
+  });
 }
 
 export async function authenticateAccount(input: { email: string; password: string }): Promise<{ accountId: string; email: string } | null> {

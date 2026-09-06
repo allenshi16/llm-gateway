@@ -16,6 +16,7 @@ export interface OutboxWorkerOptions {
   handlers?: Readonly<Record<string, OutboxHandler>>;
   workerId?: string;
   maxAttempts?: number;
+  lockTimeoutMs?: number;
 }
 
 export interface OutboxWorker {
@@ -39,12 +40,20 @@ export function createOutboxWorker(options: OutboxWorkerOptions = {}): OutboxWor
   const handlers = options.handlers ?? {};
   const workerId = options.workerId ?? `worker-${randomUUID()}`;
   const maxAttempts = options.maxAttempts ?? 10;
+  const lockTimeoutMs = options.lockTimeoutMs ?? 300_000;
   const topics = Object.keys(handlers);
 
   return {
     async runOnce(): Promise<number> {
       if (topics.length === 0) return 0;
       const claimed = await withTransaction(async (client) => {
+        await client.query(
+          `UPDATE outbox_events
+           SET status='RETRY', available_at=now(), locked_at=NULL, locked_by=NULL,
+               last_error=COALESCE(last_error, 'worker lock expired')
+           WHERE status='PROCESSING' AND locked_at < now() - ($1 * interval '1 millisecond')`,
+          [lockTimeoutMs]
+        );
         const result = await client.query<ClaimedRow>(
           `UPDATE outbox_events event
            SET status='PROCESSING', attempts=event.attempts+1, locked_at=now(), locked_by=$1

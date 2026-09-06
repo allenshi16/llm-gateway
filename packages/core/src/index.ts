@@ -7,6 +7,7 @@ export * from "./config.js";
 export * from "./control-plane-repository.js";
 export * from "./catalog-repository.js";
 export * from "./key-repository.js";
+export * from "./key-rate-limit.js";
 export * from "./accounting-repository.js";
 export * from "./stripe-projection.js";
 export * from "./stripe-webhook-repository.js";

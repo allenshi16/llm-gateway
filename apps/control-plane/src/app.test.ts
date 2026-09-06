@@ -58,4 +58,22 @@ describe("control plane", () => {
     expect(response.json()).toEqual({ error: "invalid_webhook" });
     await app.close();
   });
+
+  it("protects promotional credit grants and validates their amount", async () => {
+    const previousToken = process.env["CONTROL_PLANE_ADMIN_TOKEN"];
+    process.env["CONTROL_PLANE_ADMIN_TOKEN"] = "test-admin-token";
+    const app = buildControlPlane();
+    try {
+      const unauthorized = await app.inject({ method: "POST", url: "/v1/admin/organizations/00000000-0000-0000-0000-000000000000/promotional-credit", payload: { amountUsd: "5.00", sourceEventId: "trial-1" } });
+      expect(unauthorized.statusCode).toBe(401);
+
+      const malformed = await app.inject({ method: "POST", url: "/v1/admin/organizations/00000000-0000-0000-0000-000000000000/promotional-credit", headers: { authorization: "Bearer test-admin-token" }, payload: { amountUsd: "0", sourceEventId: "trial-1" } });
+      expect(malformed.statusCode).toBe(400);
+      expect(malformed.json().error).toBe("invalid_request");
+    } finally {
+      await app.close();
+      if (previousToken === undefined) delete process.env["CONTROL_PLANE_ADMIN_TOKEN"];
+      else process.env["CONTROL_PLANE_ADMIN_TOKEN"] = previousToken;
+    }
+  });
 });

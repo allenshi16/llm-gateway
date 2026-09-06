@@ -1,7 +1,7 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
-import { acceptInvite, authenticateAccount, createInvite, createPasswordReset, createSession, createEmailVerification, destroySession, devMailer, loadSession, recordAudit, registerAccount, requireMembership, resetPassword, revokeApiKey, verifyEmail } from "@gateway/core";
+import { acceptInvite, authenticateAccount, configuredMailer, createInvite, createPasswordReset, createSession, createEmailVerification, destroySession, loadSession, recordAudit, registerAccount, requireMembership, resetPassword, revokeApiKey, verifyEmail } from "@gateway/core";
 import { query, withTransaction } from "@gateway/database";
 
 declare module "fastify" {
@@ -35,7 +35,7 @@ function sessionId(request: FastifyRequest): string | undefined {
   return header.split(";").map((part) => part.trim()).find((part) => part.startsWith(`${COOKIE_NAME}=`))?.slice(`${COOKIE_NAME}=`.length);
 }
 
-const registerSchema = z.object({ email: z.string().email(), password: z.string().min(8), displayName: z.string().trim().max(120).optional() });
+const registerSchema = z.object({ email: z.string().email(), password: z.string().min(8), displayName: z.string().trim().max(120).optional(), inviteToken: z.string().trim().min(1).optional() });
 const loginSchema = z.object({ email: z.string().email(), password: z.string().min(1) });
 const createOrgSchema = z.object({ name: z.string().trim().min(2).max(120), slug: z.string().regex(/^[a-z0-9][a-z0-9-]{1,62}$/), workspaceName: z.string().trim().min(2).max(120), workspaceSlug: z.string().regex(/^[a-z0-9][a-z0-9-]{1,62}$/), homeRegion: z.enum(["US", "EU", "APAC"]).default("US"), workspaceRegion: z.enum(["US", "EU", "APAC"]).default("US") });
 const inviteSchema = z.object({ email: z.string().email(), role: z.enum(["OWNER", "ADMIN", "MEMBER"]), workspaceId: z.string().uuid().optional() });
@@ -72,8 +72,16 @@ export async function registerAccountRoutes(app: FastifyInstance): Promise<void>
     if (rateLimited(key)) return reply.code(429).send({ error: "too_many_attempts" });
     const parsed = registerSchema.safeParse(request.body);
     if (!parsed.success) return reply.code(400).send({ error: "invalid_request", details: parsed.error.flatten() });
-    const account = await registerAccount({ email: parsed.data.email, password: parsed.data.password, ...(parsed.data.displayName ? { displayName: parsed.data.displayName } : {}) });
-    return reply.code(201).send({ accountId: account.accountId, email: account.email });
+    if (process.env["INVITE_ONLY"] === "true" && !parsed.data.inviteToken) return reply.code(403).send({ error: "invitation_required" });
+    try {
+      const account = await registerAccount({ email: parsed.data.email, password: parsed.data.password, ...(parsed.data.displayName ? { displayName: parsed.data.displayName } : {}), ...(parsed.data.inviteToken ? { inviteToken: parsed.data.inviteToken } : {}) });
+      return reply.code(201).send({ accountId: account.accountId, email: account.email });
+    } catch (cause) {
+      if (cause instanceof Error && cause.message === "Invalid invitation") return reply.code(400).send({ error: "invalid_invitation" });
+      if (cause instanceof Error && cause.message === "Invite email does not match account") return reply.code(400).send({ error: "invite_email_mismatch" });
+      if (cause instanceof Error && cause.message === "Invitation is no longer available") return reply.code(400).send({ error: "invalid_invitation" });
+      throw cause;
+    }
   });
 
   app.post("/v1/auth/login", async (request, reply) => {
@@ -105,7 +113,7 @@ export async function registerAccountRoutes(app: FastifyInstance): Promise<void>
     const sid = sessionId(request);
     const session = sid ? await loadSession(sid) : null;
     if (!session) return reply.code(401).send({ error: "console_authentication_required" });
-    const token = await createEmailVerification({ accountId: session.account.accountId, email: session.account.email, mailer: devMailer() });
+    const token = await createEmailVerification({ accountId: session.account.accountId, email: session.account.email, mailer: configuredMailer() });
     return reply.send({ sent: true, devToken: process.env["NODE_ENV"] === "production" ? undefined : token });
   });
 
@@ -123,7 +131,7 @@ export async function registerAccountRoutes(app: FastifyInstance): Promise<void>
   app.post("/v1/auth/request-password-reset", async (request, reply) => {
     const parsed = z.object({ email: z.string().email() }).safeParse(request.body);
     if (!parsed.success) return reply.code(400).send({ error: "invalid_request" });
-    const resetToken = await createPasswordReset({ email: parsed.data.email, mailer: devMailer() });
+    const resetToken = await createPasswordReset({ email: parsed.data.email, mailer: configuredMailer() });
     return reply.send({ sent: true, devToken: process.env["NODE_ENV"] === "production" ? undefined : resetToken ?? "" });
   });
 
@@ -255,7 +263,7 @@ export async function registerAccountRoutes(app: FastifyInstance): Promise<void>
     if (!session) return reply.code(401).send({ error: "console_authentication_required" });
     const allowed = await withTransaction((client) => requireMembership(client, session.account.accountId, request.params.orgId, ["OWNER", "ADMIN", "MEMBER"], request.params.workspaceId));
     if (!allowed) return reply.code(403).send({ error: "workspace_access_required" });
-    const result = await query(`SELECT id, name, key_prefix, status, expires_at, last_used_at, created_at FROM api_keys WHERE workspace_id=$1 ORDER BY created_at DESC`, [request.params.workspaceId]);
+    const result = await query(`SELECT id, name, key_prefix, status, rpm_limit, tpm_limit, expires_at, last_used_at, created_at FROM api_keys WHERE workspace_id=$1 ORDER BY created_at DESC`, [request.params.workspaceId]);
     return reply.send({ keys: result.rows });
   });
 

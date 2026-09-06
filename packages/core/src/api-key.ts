@@ -8,7 +8,7 @@ export interface GeneratedApiKey {
 
 export function generateApiKey(pepper: string, environment: "live" | "test" = "test"): GeneratedApiKey {
   const secret = randomBytes(32).toString("base64url");
-  const prefix = `sk_${environment}_${secret.slice(0, 8)}`;
+  const prefix = `sk_${environment}_${randomBytes(4).toString("hex")}`;
   const presented = `${prefix}_${secret}`;
   return {
     secret: presented,

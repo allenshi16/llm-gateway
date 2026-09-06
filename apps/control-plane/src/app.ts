@@ -2,7 +2,7 @@ import Fastify, { type FastifyInstance } from "fastify";
 import { Readable } from "node:stream";
 import { timingSafeEqual } from "node:crypto";
 import { z } from "zod";
-import { createApiKey, createOrganization, creditWalletFromPayment, createRateLimiter, loadConfig, reconcileUsageEvent, recordStripeWebhookEvent, revokeApiKey, securityHeaders } from "@gateway/core";
+import { createApiKey, createOrganization, creditWalletFromPayment, createRateLimiter, loadConfig, reconcileUsageEvent, recordAudit, recordStripeWebhookEvent, revokeApiKey, securityHeaders } from "@gateway/core";
 import { query } from "@gateway/database";
 import { usageEventSchema } from "@gateway/contracts";
 import { createStripeClient } from "@gateway/core";
@@ -30,7 +30,14 @@ const keyRequestSchema = z.object({
   createdById: z.string().uuid(),
   name: z.string().trim().min(1).max(120),
   environment: z.enum(["live", "test"]).default("test"),
+  rpmLimit: z.number().int().positive().optional(),
+  tpmLimit: z.number().int().positive().optional(),
   expiresAt: z.string().datetime().optional()
+});
+
+const keyLimitsSchema = z.object({
+  rpmLimit: z.number().int().positive().nullable(),
+  tpmLimit: z.number().int().positive().nullable()
 });
 
 function hasControlPlaneAdminToken(request: { headers: { authorization?: string | undefined } }): boolean {
@@ -207,22 +214,16 @@ export function buildControlPlane(): FastifyInstance {
     try {
       const membership = await query(`SELECT 1 FROM memberships WHERE workspace_id=$1 AND account_id=$2 AND role IN ('OWNER','ADMIN') LIMIT 1`, [parsed.data.workspaceId, parsed.data.createdById]);
       if (membership.rowCount !== 1) return reply.code(403).send({ error: "workspace_admin_required" });
-      const keyInput = parsed.data.expiresAt
-        ? {
-            workspaceId: parsed.data.workspaceId,
-            createdById: parsed.data.createdById,
-            name: parsed.data.name,
-            environment: parsed.data.environment,
-            pepper,
-            expiresAt: new Date(parsed.data.expiresAt)
-          }
-        : {
-            workspaceId: parsed.data.workspaceId,
-            createdById: parsed.data.createdById,
-            name: parsed.data.name,
-            environment: parsed.data.environment,
-            pepper
-          };
+      const keyInput = {
+        workspaceId: parsed.data.workspaceId,
+        createdById: parsed.data.createdById,
+        name: parsed.data.name,
+        environment: parsed.data.environment,
+        pepper,
+        ...(parsed.data.rpmLimit !== undefined ? { rpmLimit: parsed.data.rpmLimit } : {}),
+        ...(parsed.data.tpmLimit !== undefined ? { tpmLimit: parsed.data.tpmLimit } : {}),
+        ...(parsed.data.expiresAt ? { expiresAt: new Date(parsed.data.expiresAt) } : {})
+      };
       const key = await createApiKey(keyInput);
       return reply.code(201).send(key);
     } catch (error) {
@@ -239,8 +240,21 @@ export function buildControlPlane(): FastifyInstance {
 
   app.get<{ Params: { workspaceId: string } }>("/v1/workspaces/:workspaceId/api-keys", async (request, reply) => {
     if (!hasControlPlaneAdminToken(request)) return reply.code(401).send({ error: "control_plane_authentication_required" });
-    const result = await query(`SELECT id, name, key_prefix, status, expires_at, last_used_at, created_at FROM api_keys WHERE workspace_id=$1 ORDER BY created_at DESC`, [request.params.workspaceId]);
+    const result = await query(`SELECT id, name, key_prefix, status, rpm_limit, tpm_limit, expires_at, last_used_at, created_at FROM api_keys WHERE workspace_id=$1 ORDER BY created_at DESC`, [request.params.workspaceId]);
     return { keys: result.rows };
+  });
+
+  app.patch<{ Params: { workspaceId: string; keyId: string } }>("/v1/workspaces/:workspaceId/api-keys/:keyId/limits", async (request, reply) => {
+    if (!hasControlPlaneAdminToken(request)) return reply.code(401).send({ error: "control_plane_authentication_required" });
+    const parsed = keyLimitsSchema.safeParse(request.body);
+    if (!parsed.success) return reply.code(400).send({ error: "invalid_request", details: parsed.error.flatten() });
+    const result = await query<{ id: string; rpm_limit: number | null; tpm_limit: number | null }>(
+      `UPDATE api_keys SET rpm_limit=$1, tpm_limit=$2 WHERE id=$3 AND workspace_id=$4 RETURNING id, rpm_limit, tpm_limit`,
+      [parsed.data.rpmLimit, parsed.data.tpmLimit, request.params.keyId, request.params.workspaceId]
+    );
+    const key = result.rows[0];
+    if (!key) return reply.code(404).send({ error: "api_key_not_found" });
+    return reply.send({ keyId: key.id, rpmLimit: key.rpm_limit, tpmLimit: key.tpm_limit });
   });
 
   app.get<{ Params: { workspaceId: string } }>("/v1/workspaces/:workspaceId/models", async (request, reply) => {
@@ -265,6 +279,95 @@ export function buildControlPlane(): FastifyInstance {
     if (!hasControlPlaneAdminToken(request)) return reply.code(401).send({ error: "control_plane_authentication_required" });
     const { listPlans } = await import("@gateway/core");
     return { plans: await listPlans() };
+  });
+
+  app.patch<{ Params: { organizationId: string } }>("/v1/admin/organizations/:organizationId/status", async (request, reply) => {
+    if (!hasControlPlaneAdminToken(request)) return reply.code(401).send({ error: "control_plane_authentication_required" });
+    const parsed = z.object({ status: z.enum(["ACTIVE", "SUSPENDED"]) }).safeParse(request.body);
+    if (!parsed.success) return reply.code(400).send({ error: "invalid_request", details: parsed.error.flatten() });
+    const result = await query<{ id: string; status: string }>(
+      `UPDATE organizations SET status=$1, updated_at=now() WHERE id=$2 RETURNING id, status`,
+      [parsed.data.status, request.params.organizationId]
+    );
+    const organization = result.rows[0];
+    if (!organization) return reply.code(404).send({ error: "organization_not_found" });
+    await recordAudit({ organizationId: organization.id, action: `organization.status_${organization.status.toLowerCase()}`, resourceType: "organization", resourceId: organization.id, metadata: { status: organization.status } });
+    return reply.send({ organizationId: organization.id, status: organization.status });
+  });
+
+  app.patch<{ Params: { accountId: string } }>("/v1/admin/accounts/:accountId/status", async (request, reply) => {
+    if (!hasControlPlaneAdminToken(request)) return reply.code(401).send({ error: "control_plane_authentication_required" });
+    const parsed = z.object({ status: z.enum(["ACTIVE", "SUSPENDED"]) }).safeParse(request.body);
+    if (!parsed.success) return reply.code(400).send({ error: "invalid_request", details: parsed.error.flatten() });
+    const result = await query<{ id: string; status: string }>(
+      `UPDATE accounts SET status=$1, updated_at=now() WHERE id=$2 RETURNING id, status`,
+      [parsed.data.status, request.params.accountId]
+    );
+    const account = result.rows[0];
+    if (!account) return reply.code(404).send({ error: "account_not_found" });
+    await recordAudit({ accountId: account.id, actorId: account.id, action: `account.status_${account.status.toLowerCase()}`, resourceType: "account", resourceId: account.id, metadata: { status: account.status } });
+    return reply.send({ accountId: account.id, status: account.status });
+  });
+
+  app.post<{ Params: { workspaceId: string } }>("/v1/admin/workspaces/:workspaceId/model-entitlements", async (request, reply) => {
+    if (!hasControlPlaneAdminToken(request)) return reply.code(401).send({ error: "control_plane_authentication_required" });
+    const parsed = z.object({ modelPublicName: z.string().trim().min(1).max(120), billingMode: z.enum(["PREPAID", "POSTPAID", "INCLUDED", "PROMOTIONAL", "NON_BILLABLE"]).default("PREPAID") }).safeParse(request.body);
+    if (!parsed.success) return reply.code(400).send({ error: "invalid_request", details: parsed.error.flatten() });
+    const approvedModel = await query<{ id: string; public_name: string }>(
+      `SELECT mp.id, mp.public_name
+       FROM model_products mp
+       JOIN provider_routes pr ON pr.model_product_id=mp.id
+       WHERE mp.public_name=$1 AND mp.active AND pr.region='US' AND pr.status='APPROVED'
+         AND pr.resale_approved AND pr.dpa_approved AND pr.security_approved
+         AND pr.residency_approved AND NOT pr.kill_switch
+       LIMIT 1`,
+      [parsed.data.modelPublicName]
+    );
+    const model = approvedModel.rows[0];
+    if (!model) return reply.code(409).send({ error: "model_route_not_approved" });
+    const entitlement = await query<{ workspace_id: string; model_product_id: string; billing_mode: string; enabled: boolean; inserted: boolean }>(
+      `INSERT INTO model_entitlements (workspace_id, model_product_id, billing_mode, enabled)
+       VALUES ($1,$2,$3,true)
+       ON CONFLICT (workspace_id, model_product_id)
+       DO UPDATE SET billing_mode=EXCLUDED.billing_mode, enabled=true, updated_at=now()
+       RETURNING workspace_id, model_product_id, billing_mode, enabled, (xmax = 0) AS inserted`,
+      [request.params.workspaceId, model.id, parsed.data.billingMode]
+    );
+    const result = entitlement.rows[0];
+    if (!result) return reply.code(500).send({ error: "model_entitlement_failed" });
+    const workspace = await query<{ organization_id: string }>(`SELECT organization_id FROM workspaces WHERE id=$1`, [request.params.workspaceId]);
+    const organizationId = workspace.rows[0]?.organization_id;
+    if (!organizationId) return reply.code(404).send({ error: "workspace_not_found" });
+    await recordAudit({ organizationId, workspaceId: request.params.workspaceId, action: result.inserted ? "model_entitlement.grant" : "model_entitlement.enable", resourceType: "model_entitlement", resourceId: result.model_product_id, metadata: { publicName: model.public_name, billingMode: result.billing_mode } });
+    return reply.code(result.inserted ? 201 : 200).send({ workspaceId: result.workspace_id, modelProductId: result.model_product_id, billingMode: result.billing_mode, enabled: result.enabled, publicName: model.public_name });
+  });
+
+  app.delete<{ Params: { workspaceId: string; modelProductId: string } }>("/v1/admin/workspaces/:workspaceId/model-entitlements/:modelProductId", async (request, reply) => {
+    if (!hasControlPlaneAdminToken(request)) return reply.code(401).send({ error: "control_plane_authentication_required" });
+    const result = await query(
+      `UPDATE model_entitlements SET enabled=false, updated_at=now() WHERE workspace_id=$1 AND model_product_id=$2 AND enabled RETURNING id`,
+      [request.params.workspaceId, request.params.modelProductId]
+    );
+    if (result.rowCount === 1) {
+      const workspace = await query<{ organization_id: string }>(`SELECT organization_id FROM workspaces WHERE id=$1`, [request.params.workspaceId]);
+      const organizationId = workspace.rows[0]?.organization_id;
+      if (organizationId) await recordAudit({ organizationId, workspaceId: request.params.workspaceId, action: "model_entitlement.revoke", resourceType: "model_entitlement", resourceId: request.params.modelProductId });
+    }
+    return result.rowCount === 1 ? reply.code(204).send() : reply.code(404).send({ error: "model_entitlement_not_found" });
+  });
+
+  app.post<{ Params: { organizationId: string } }>("/v1/admin/organizations/:organizationId/promotional-credit", async (request, reply) => {
+    if (!hasControlPlaneAdminToken(request)) return reply.code(401).send({ error: "control_plane_authentication_required" });
+    const parsed = z.object({ amountUsd: z.string().regex(/^(?:0|[1-9]\d*)(?:\.\d{1,8})?$/).refine((value) => Number(value) > 0, "amountUsd must be positive"), sourceEventId: z.string().trim().min(1).max(160) }).safeParse(request.body);
+    if (!parsed.success) return reply.code(400).send({ error: "invalid_request", details: parsed.error.flatten() });
+    try {
+      const { grantPromotionalCredit } = await import("@gateway/core");
+      const result = await grantPromotionalCredit({ organizationId: request.params.organizationId, amountUsd: parsed.data.amountUsd, sourceEventId: parsed.data.sourceEventId });
+      return reply.code(result.credited ? 201 : 200).send(result);
+    } catch (cause) {
+      if (cause instanceof Error && cause.message === "Promotional credit source conflicts with another organization") return reply.code(409).send({ error: "promotional_credit_source_conflict" });
+      throw cause;
+    }
   });
 
   app.put<{ Params: { planId: string } }>("/v1/admin/billing/plans/:planId", async (request, reply) => {

@@ -26,6 +26,8 @@ export interface CreateKeyInput {
   name: string;
   pepper: string;
   environment: "live" | "test";
+  rpmLimit?: number;
+  tpmLimit?: number;
   expiresAt?: Date;
 }
 
@@ -81,9 +83,9 @@ export async function createApiKey(input: CreateKeyInput): Promise<CreatedKey> {
   const generated = generateApiKey(input.pepper, input.environment);
   const id = randomUUID();
   await query(
-    `INSERT INTO api_keys (id, workspace_id, created_by_id, name, key_prefix, secret_hash, expires_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-    [id, input.workspaceId, input.createdById, input.name, generated.prefix, generated.hash, optionalDateValue(input.expiresAt)]
+    `INSERT INTO api_keys (id, workspace_id, created_by_id, name, key_prefix, secret_hash, expires_at, rpm_limit, tpm_limit)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+    [id, input.workspaceId, input.createdById, input.name, generated.prefix, generated.hash, optionalDateValue(input.expiresAt), input.rpmLimit ?? null, input.tpmLimit ?? null]
   );
   return { id, secret: generated.secret, prefix: generated.prefix };
 }

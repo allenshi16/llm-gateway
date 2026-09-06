@@ -1,0 +1,27 @@
+- main [ref=f4e2]:
+  - navigation [ref=f4e3]:
+    - generic [ref=f4e4]:
+      - generic [ref=f4e5]: "N"
+      - generic [ref=f4e6]: Northstar
+    - link "Open Console →" [ref=f4e7] [cursor=pointer]:
+      - /url: http://localhost:4301/login
+  - generic [ref=f4e8]:
+    - text: MODEL CATALOG / APPROVED ROUTES
+    - heading "Choose the model. Keep the interface." [level=1] [ref=f4e9]
+    - paragraph [ref=f4e10]: Route workloads across leading Chinese and global model families while preserving one integration surface for your developers.
+  - generic [ref=f4e11]:
+    - generic [ref=f4e12]:
+      - heading "DeepSeek" [level=2] [ref=f4e13]
+      - paragraph [ref=f4e14]: Reasoning and chat routes with regional approval, token limits, and predictable customer pricing.
+    - generic [ref=f4e15]:
+      - heading "Qwen" [level=2] [ref=f4e16]
+      - paragraph [ref=f4e17]: Flexible general-purpose and coding workloads with workspace-level entitlements.
+    - generic [ref=f4e18]:
+      - heading "Kimi and GLM" [level=2] [ref=f4e19]
+      - paragraph [ref=f4e20]: Long-context and multilingual options for teams building across US and European markets.
+  - generic [ref=f4e21]:
+    - generic [ref=f4e22]:
+      - generic [ref=f4e23]: "N"
+      - generic [ref=f4e24]: Northstar
+    - generic [ref=f4e25]: Model access without operational noise.
+    - generic [ref=f4e26]: © 2026 Northstar Gateway

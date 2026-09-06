@@ -1,0 +1,25 @@
+- main [ref=e2]:
+  - complementary [ref=e3]:
+    - generic [ref=e4]:
+      - generic [ref=e5]: M
+      - generic [ref=e6]: Maridian
+    - generic [ref=e7]:
+      - generic [ref=e8]: WORKSPACE
+      - combobox "WORKSPACE Loading access" [ref=e9]
+      - generic [ref=e10]: Loading access
+    - navigation [ref=e11]:
+      - link "Overview" [ref=e12] [cursor=pointer]:
+        - /url: /dashboard
+      - link "API keys" [ref=e13] [cursor=pointer]:
+        - /url: /api-keys
+      - link "Usage" [ref=e14] [cursor=pointer]:
+        - /url: /usage
+      - link "Models" [ref=e15] [cursor=pointer]:
+        - /url: /models
+      - link "Billing" [ref=e16] [cursor=pointer]:
+        - /url: /billing
+      - link "Members" [ref=e17] [cursor=pointer]:
+        - /url: /members
+      - link "Audit" [ref=e18] [cursor=pointer]:
+        - /url: /audit
+  - generic [ref=e19]: Loading workspace context…
