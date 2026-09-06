@@ -176,6 +176,7 @@ export default function Gpt6VsChineseLlms() {
           separate bill and separate ops.
         </p>
         <Link className="article-button" href="/models">See the supported model catalog ↗</Link>
+        <p style={{ marginTop: "1rem" }}>Read next: <Link href="/blog/deepseek-vs-qwen">DeepSeek vs Qwen comparison</Link> · <Link href="/blog/best-chinese-models-2026">Best Chinese AI Models 2026</Link></p>
       </section>
 
       {/* FAQ */}

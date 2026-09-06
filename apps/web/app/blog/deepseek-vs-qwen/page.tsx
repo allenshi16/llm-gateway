@@ -171,6 +171,7 @@ export default function DeepSeekVsQwen() {
           an SDK.
         </p>
         <Link className="article-button" href="/models">Browse the model catalog ↗</Link>
+        <p style={{ marginTop: "1rem" }}>Read next: <Link href="/blog/gpt6-vs-chinese-llms">GPT-6 vs Chinese LLMs routing framework</Link> · <Link href="/blog/best-chinese-models-2026">Best Chinese AI Models 2026</Link></p>
       </section>
 
       {/* FAQ */}

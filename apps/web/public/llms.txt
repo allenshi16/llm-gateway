@@ -1,0 +1,15 @@
+# Maridian Gateway (bestllm.dev)
+
+> OpenAI-compatible API gateway for approved LLM providers: DeepSeek, Qwen, Kimi, GLM and MiniMax. One integration surface with regional routing, spend controls and an immutable billing ledger. Model comparison guides for teams choosing Chinese LLMs.
+
+## Main pages
+- [Home](https://bestllm.dev/): Platform overview
+- [Models](https://bestllm.dev/models): Supported model catalog with pricing and context windows
+- [Pricing](https://bestllm.dev/pricing): Gateway pricing and spend controls
+- [Platform](https://bestllm.dev/platform): Routing, policy and ledger features
+
+## Model guides
+- [Best Chinese AI Models 2026](https://bestllm.dev/blog/best-chinese-models-2026): DeepSeek, Qwen, Kimi, GLM comparison
+- [DeepSeek vs Qwen](https://bestllm.dev/blog/deepseek-vs-qwen): Which Chinese LLM for code, agents vs multilingual
+- [GPT-6 vs Chinese LLMs](https://bestllm.dev/blog/gpt6-vs-chinese-llms): Multi-model routing framework
+- [MiniMax H3](https://bestllm.dev/blog/minimax-h3): Video generation API pricing and integration
