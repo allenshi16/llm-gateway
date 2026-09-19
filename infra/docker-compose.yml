@@ -38,6 +38,20 @@ services:
     volumes:
       - ./litellm/config.yaml:/app/config.yaml:ro
 
+  # Marketing site tunnel (bestllm.dev). Run on the origin machine only:
+  #   docker-compose -f infra/docker-compose.yml up -d cloudflared
+  # requires CLOUDFLARE_TUNNEL_TOKEN in .env (Zero Trust -> Networks -> Tunnels -> the
+  # bestllm.dev tunnel -> Install and run a connector -> copy the token).
+  # HTTP 1033 from the edge means no connector is running; this service is the fix.
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: ["tunnel", "run"]
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:?CLOUDFLARE_TUNNEL_TOKEN required}
+    # If the marketing site runs on this host instead of another container, point the
+    # tunnel's public hostname at http://host.docker.internal:<port> in the dashboard.
+
 volumes:
   gateway-postgres:
   gateway-redis:
