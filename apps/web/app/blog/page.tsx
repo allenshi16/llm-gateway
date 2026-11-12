@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { Logo } from "@gateway/ui";
+import { modelCatalog } from "@gateway/brand/models";
 
 export const metadata: Metadata = {
   title: "Blog — LLM Pricing, Guides & Chinese AI Model Comparisons",
@@ -8,21 +9,21 @@ export const metadata: Metadata = {
     "Developer guides, pricing breakdowns, and comparison articles for DeepSeek, Qwen, Kimi, GLM, MiniMax, and the broader LLM API ecosystem.",
   openGraph: {
     type: "website",
-    title: "Blog — Maridian Gateway",
+    title: "Blog — BestLLM",
     description: "LLM pricing guides, model comparisons, and API integration resources.",
   },
 };
 
 const articles = [
   {
-    slug: "/blog/gpt6-vs-chinese-llms",
-    title: "GPT-6 vs Chinese LLMs: Building a Multi-Model API Mix",
+    slug: "/blog/best-chinese-models-2026",
+    title: "Best Chinese AI Models 2026: DeepSeek, Qwen, Kimi, GLM Comparison",
     description:
-      "A routing framework for mixing GPT-6 with DeepSeek, Qwen and Kimi: where frontier models earn their cost, and how escalation tiers cut API bills.",
-    date: "2026-09-06",
-    category: "Routing Strategy",
-    readTime: "6 min",
-    tags: ["GPT-6", "Multi-Model", "Routing"],
+      "Comprehensive comparison of the top Chinese AI models with real pricing, benchmarks, use-case recommendations, and API compatibility analysis.",
+    date: "2026-09-03",
+    category: "Comparison",
+    readTime: "10 min",
+    tags: ["DeepSeek", "Qwen", "Kimi", "GLM", "Chinese AI"],
   },
   {
     slug: "/blog/deepseek-vs-qwen",
@@ -35,6 +36,16 @@ const articles = [
     tags: ["DeepSeek", "Qwen", "Comparison"],
   },
   {
+    slug: "/blog/gpt6-vs-chinese-llms",
+    title: "GPT-6 vs Chinese LLMs: Building a Multi-Model API Mix",
+    description:
+      "A routing framework for mixing GPT-6 with DeepSeek, Qwen and Kimi: where frontier models earn their cost, and how escalation tiers cut API bills.",
+    date: "2026-09-06",
+    category: "Routing Strategy",
+    readTime: "6 min",
+    tags: ["GPT-6", "Multi-Model", "Routing"],
+  },
+  {
     slug: "/blog/minimax-h3",
     title: "MiniMax H3 API: Complete Pricing & Integration Guide",
     description:
@@ -45,14 +56,24 @@ const articles = [
     tags: ["MiniMax", "Video Generation", "API Pricing"],
   },
   {
-    slug: "/blog/best-chinese-models-2026",
-    title: "Best Chinese AI Models 2026: DeepSeek, Qwen, Kimi, GLM Comparison",
+    slug: "/blog/what-is-jev-typesafe",
+    title: "What Is Jev? TypeSafe AI's 'System One' Decision Model Explained",
     description:
-      "Comprehensive comparison of the top Chinese AI models with real pricing, benchmarks, use-case recommendations, and API compatibility analysis.",
-    date: "2026-09-03",
+      "Jev returns type-safe structured values with calibrated probabilities — not text. What it does, $0.042/MTok pricing, the api.typesafe.ai surface, and how it pairs with an LLM gateway for routing, guardrails and scoring.",
+    date: "2026-09-25",
+    category: "Model Guide",
+    readTime: "6 min",
+    tags: ["Jev", "TypeSafe AI", "Decision Model"],
+  },
+  {
+    slug: "/blog/jev-vs-laya-alternatives",
+    title: "Jev vs Laya vs AnyJev (2026): Open-Source Decision Model Alternatives",
+    description:
+      "Comparing TypeSafe AI's Jev against open-source decision models — Laya (Convai Innovations), Nokia's AnyJev and Contrastive-LM's CLM-8B — on latency, cost, accuracy and self-hosting, with honest caveats on vendor-reported benchmarks.",
+    date: "2026-09-25",
     category: "Comparison",
-    readTime: "10 min",
-    tags: ["DeepSeek", "Qwen", "Kimi", "GLM", "Chinese AI"],
+    readTime: "7 min",
+    tags: ["Jev", "Laya", "AnyJev", "Open Source"],
   },
 ];
 
@@ -120,31 +141,33 @@ export default function BlogIndex() {
         <h2>Explore Model Pages</h2>
         <p>Individual pricing, specs, and API examples for every model we cover:</p>
         <div className="blog-index-model-links">
-          {[
-            { slug: "deepseek-chat", name: "DeepSeek Chat" },
-            { slug: "deepseek-reasoner", name: "DeepSeek Reasoner" },
-            { slug: "qwen-max", name: "Qwen Max" },
-            { slug: "qwen3-8-max", name: "Qwen3.8 Max" },
-            { slug: "kimi-k2", name: "Kimi K2" },
-            { slug: "kimi-k3", name: "Kimi K3" },
-            { slug: "glm-4-plus", name: "GLM-4 Plus" },
-            { slug: "minimax-h3", name: "MiniMax H3" },
-          ].map((m) => (
-            <Link
-              key={m.slug}
-              href={`/models/${m.slug}`}
-              className="blog-index-model-link"
-            >
-              {m.name}
-            </Link>
-          ))}
+          {modelCatalog
+            .slice()
+            .sort((a, b) => Number(b.supported) - Number(a.supported))
+            .map((m) => (
+              <Link
+                key={m.slug}
+                href={`/models/${m.slug}`}
+                className="blog-index-model-link"
+              >
+                {m.name}
+              </Link>
+            ))}
         </div>
       </section>
 
       <footer className="marketing-footer">
         <Logo />
         <span>Model access without operational noise.</span>
-        <span>© 2026 Maridian Gateway</span>
+        <span>© 2026 BestLLM</span>
+        <div className="footer-badges">
+          <a href="https://thesaasdir.com" rel="dofollow">
+            <img src="/badges/thesaasdir.svg" alt="Featured on TheSaaSDir" width="160" height="44" />
+          </a>
+          <a href="https://semilaunch.com" target="_blank" rel="noopener">
+            <img src="/badges/semilaunch.png" alt="Featured on SemiLaunch" width="220" height="77" />
+          </a>
+        </div>
       </footer>
     </main>
   );

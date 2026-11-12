@@ -1,0 +1,55 @@
+name: Deploy Web (Cloudflare Workers)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "apps/web/**"
+      - "packages/brand/**"
+      - "packages/ui/**"
+      - "bun.lock"
+      - ".github/workflows/deploy-web.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-web
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Build & deploy @gateway/web
+    runs-on: ubuntu-latest
+    env:
+      # Build-time (inlined into the bundle) + runtime site URL used by sitemap/robots/canonical.
+      NEXT_PUBLIC_SITE_URL: https://bestllm.dev
+      NEXT_PUBLIC_CONSOLE_URL: https://app.bestllm.dev/login
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build OpenNext bundle
+        working-directory: apps/web
+        env:
+          NODE_ENV: production
+        run: bunx opennextjs-cloudflare build
+
+      - name: Deploy to Cloudflare Workers
+        working-directory: apps/web
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          # Account ID is not secret; pinned so the only repo setup is the one API token.
+          CLOUDFLARE_ACCOUNT_ID: d603c5806d4a180bafaa23b6164dd13c
+        run: bunx opennextjs-cloudflare deploy

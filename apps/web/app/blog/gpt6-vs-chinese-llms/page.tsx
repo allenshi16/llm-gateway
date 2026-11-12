@@ -30,8 +30,8 @@ const jsonLd = {
     "Where frontier OpenAI models earn their cost versus DeepSeek, Qwen and Kimi — a routing framework for teams running a multi-model API mix.",
   datePublished: "2026-09-06",
   dateModified: "2026-09-06",
-  author: { "@type": "Organization", name: "Maridian Gateway" },
-  publisher: { "@type": "Organization", name: "Maridian Gateway" },
+  author: { "@type": "Organization", name: "BestLLM" },
+  publisher: { "@type": "Organization", name: "BestLLM" },
 };
 
 /* ------------------------------------------------------------------ */
@@ -126,9 +126,9 @@ export default function Gpt6VsChineseLlms() {
             <span className="feature-number">03 / BREADTH</span>
             <h3>Qwen for multilingual volume</h3>
             <p>
-              Mixed-language products get the most consistent results from Qwen Max, with Qwen Plus
-              absorbing volume tiers. For million-token document review, self-hosted Qwen3.8 Max
-              changes the math entirely.
+              Mixed-language products get the most consistent results from Qwen3.8 Max, with Qwen
+              Plus absorbing volume tiers. For million-token document review, Qwen3.8 Max&apos;s 1M
+              context — or MiniMax M3 at a lower price — changes the math entirely.
             </p>
           </div>
           <div className="feature-card">
@@ -148,8 +148,8 @@ export default function Gpt6VsChineseLlms() {
         <h2>A routing policy you can ship this week</h2>
         <ul>
           <li><strong>Default tier:</strong> DeepSeek Chat for everything. This alone cuts most bills versus all-frontier routing.</li>
-          <li><strong>Quality escalator:</strong> if a request fails your eval or a user retries, re-run it on the next tier up (Reasoner → Qwen Max → GPT-6).</li>
-          <li><strong>Language rule:</strong> requests mixing non-English languages route to Qwen Max first.</li>
+          <li><strong>Quality escalator:</strong> if a request fails your eval or a user retries, re-run it on the next tier up (Reasoner → Qwen3.8 Max → GPT-6).</li>
+          <li><strong>Language rule:</strong> requests mixing non-English languages route to Qwen3.8 Max first.</li>
           <li><strong>Cost ceiling:</strong> per-workspace spend controls so an escalated loop can&apos;t silently burn frontier budget.</li>
           <li><strong>Measurement:</strong> log model ID with every response — you can&apos;t optimize a mix you can&apos;t attribute.</li>
         </ul>
@@ -170,7 +170,7 @@ export default function Gpt6VsChineseLlms() {
       <section className="article-section">
         <h2>One API, every tier</h2>
         <p>
-          Maridian Gateway routes DeepSeek, Qwen, Kimi and GLM through one OpenAI-compatible
+          BestLLM routes DeepSeek, Qwen, Kimi and GLM through one OpenAI-compatible
           endpoint with regional policy, spend controls and an immutable billing ledger — so the
           frontier tier you keep with OpenAI plugs into the same routing policy instead of a
           separate bill and separate ops.
@@ -186,10 +186,10 @@ export default function Gpt6VsChineseLlms() {
         <details><summary>Can I route GPT-6 and Chinese models through the same API?</summary><p>Yes. All of these models expose an OpenAI-compatible chat completions surface. Behind a gateway, they differ only by model ID, so escalation and failover become routing rules.</p></details>
         <details><summary>How do I decide which requests go to which model?</summary><p>Start with a default tier (cost-efficient), add a quality escalator triggered by failed evals or user retries, and add language-based rules. Log every response with its model ID so the mix is measurable.</p></details>
         <details><summary>Does mixing models create vendor lock-in?</summary><p>The opposite: a multi-model mix reduces dependence on any single provider, provided every model speaks the same API surface and your spend controls and billing stay in one place.</p></details>
-        <details><summary>Which Chinese models pair best with GPT-6?</summary><p>DeepSeek Chat/Reasoner for code and reasoning volume, Qwen Max/Plus for multilingual workloads, and Kimi K2/K3 for long-context tasks — all available through Maridian Gateway&apos;s OpenAI-compatible API.</p></details>
+        <details><summary>Which Chinese models pair best with GPT-6?</summary><p>DeepSeek Chat/Reasoner for code and reasoning volume, Qwen3.8 Max/Plus for multilingual workloads, Kimi K3 for frontier reasoning and GLM-5 for coding and agents — all available through BestLLM&apos;s OpenAI-compatible API.</p></details>
       </section>
 
-      <footer className="marketing-footer"><Logo /><span>Model access without operational noise.</span><span>© 2026 Maridian Gateway</span></footer>
+      <footer className="marketing-footer"><Logo /><span>Model access without operational noise.</span><span>© 2026 BestLLM</span><div className="footer-badges"><a href="https://thesaasdir.com" rel="dofollow"><img src="/badges/thesaasdir.svg" alt="Featured on TheSaaSDir" width="160" height="44" /></a><a href="https://semilaunch.com" target="_blank" rel="noopener"><img src="/badges/semilaunch.png" alt="Featured on SemiLaunch" width="220" height="77" /></a></div></footer>
     </main>
   );
 }

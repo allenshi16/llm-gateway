@@ -30,8 +30,8 @@ const jsonLd = {
     "Comprehensive guide to MiniMax H3 API pricing, features, architecture, and integration for developers.",
   datePublished: "2026-09-03",
   dateModified: "2026-09-03",
-  author: { "@type": "Organization", name: "Maridian Gateway" },
-  publisher: { "@type": "Organization", name: "Maridian Gateway" },
+  author: { "@type": "Organization", name: "BestLLM" },
+  publisher: { "@type": "Organization", name: "BestLLM" },
 };
 
 /* ------------------------------------------------------------------ */
@@ -380,7 +380,7 @@ export default function MiniMaxH3Guide() {
         <p>
           No — MiniMax H3 is a video generation model. For text LLM APIs (chat, reasoning, code
           generation), consider DeepSeek, Qwen, Kimi, or GLM through{" "}
-          <Link href="/models">Maridian Gateway</Link>.
+          <Link href="/models">BestLLM</Link>.
         </p>
       </section>
 
@@ -388,7 +388,7 @@ export default function MiniMaxH3Guide() {
       <section className="article-cta">
         <h2>Need Text Generation Instead?</h2>
         <p>
-          Maridian Gateway offers DeepSeek, Qwen, Kimi, and GLM through one OpenAI-compatible API
+          BestLLM offers DeepSeek, Qwen, Kimi, and GLM through one OpenAI-compatible API
           with regional routing, workspace-level spend controls, and an immutable billing ledger.
         </p>
         <div className="article-cta-actions">
@@ -405,7 +405,15 @@ export default function MiniMaxH3Guide() {
       <footer className="marketing-footer">
         <Logo />
         <span>Model access without operational noise.</span>
-        <span>© 2026 Maridian Gateway</span>
+        <span>© 2026 BestLLM</span>
+        <div className="footer-badges">
+          <a href="https://thesaasdir.com" rel="dofollow">
+            <img src="/badges/thesaasdir.svg" alt="Featured on TheSaaSDir" width="160" height="44" />
+          </a>
+          <a href="https://semilaunch.com" target="_blank" rel="noopener">
+            <img src="/badges/semilaunch.png" alt="Featured on SemiLaunch" width="220" height="77" />
+          </a>
+        </div>
       </footer>
     </main>
   );

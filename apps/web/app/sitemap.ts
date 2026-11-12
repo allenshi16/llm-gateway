@@ -22,6 +22,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
   }));
 
   const blogPages: MetadataRoute.Sitemap = [
+    { url: `${base}/blog/what-is-jev-typesafe`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.8 },
+    { url: `${base}/blog/jev-vs-laya-alternatives`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.8 },
     { url: `${base}/blog/minimax-h3`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.8 },
     { url: `${base}/blog/best-chinese-models-2026`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.8 },
     { url: `${base}/blog/deepseek-vs-qwen`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.8 },

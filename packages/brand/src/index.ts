@@ -1,7 +1,7 @@
 export const brand = {
-  name: "Maridian Gateway",
-  tagline: "One calm control plane for every model route.",
-  description: "OpenAI-compatible access to approved LLM providers with regional policy, spend controls, and an immutable commercial ledger.",
+  name: "BestLLM",
+  tagline: "One OpenAI-compatible API for every LLM route.",
+  description: "OpenAI-compatible access to DeepSeek, Qwen, Kimi, GLM, and MiniMax through a single LLM API gateway — with regional routing, spend controls, and transparent per-token pricing.",
   colors: {
     ink: "#08111f",
     panel: "#0d1b2d",

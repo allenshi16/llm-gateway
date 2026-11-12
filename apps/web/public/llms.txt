@@ -1,4 +1,4 @@
-# Maridian Gateway (bestllm.dev)
+# BestLLM (bestllm.dev)
 
 > OpenAI-compatible API gateway for approved LLM providers: DeepSeek, Qwen, Kimi, GLM and MiniMax. One integration surface with regional routing, spend controls and an immutable billing ledger. Model comparison guides for teams choosing Chinese LLMs.
 

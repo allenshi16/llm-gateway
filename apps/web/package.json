@@ -3,7 +3,25 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "scripts": { "dev": "next dev -p 4300", "build": "next build", "typecheck": "tsc --noEmit", "indexnow": "bash scripts/indexnow-submit.sh" },
-  "dependencies": { "@gateway/brand": "workspace:*", "@gateway/ui": "workspace:*", "next": "15.4.0", "react": "19.1.0", "react-dom": "19.1.0" },
-  "devDependencies": { "typescript": "5.9.3" }
+  "scripts": {
+    "dev": "next dev -p 4300",
+    "build": "next build",
+    "typecheck": "tsc --noEmit",
+    "indexnow": "bash scripts/indexnow-submit.sh",
+    "build:cf": "opennextjs-cloudflare build",
+    "deploy:cf": "wrangler deploy",
+    "preview:cf": "opennextjs-cloudflare build && wrangler dev"
+  },
+  "dependencies": {
+    "@gateway/brand": "workspace:*",
+    "@gateway/ui": "workspace:*",
+    "next": "15.4.0",
+    "react": "19.1.0",
+    "react-dom": "19.1.0"
+  },
+  "devDependencies": {
+    "@opennextjs/cloudflare": "^1.20.17",
+    "typescript": "5.9.3",
+    "wrangler": "^4.160.1"
+  }
 }

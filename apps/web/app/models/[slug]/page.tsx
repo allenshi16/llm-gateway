@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { modelCatalog, getModelBySlug, type ModelPage } from "@gateway/brand/models";
+import { modelCatalog, getModelBySlug, getSupportedModels, type ModelPage } from "@gateway/brand/models";
 import { Card, Logo } from "@gateway/ui";
 
 /* ------------------------------------------------------------------ */
@@ -22,10 +22,10 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   if (!model) return {};
 
   const title = model.supported
-    ? `${model.name} API Pricing & Integration — Maridian Gateway`
+    ? `${model.name} API Pricing & Integration`
     : `${model.name} API: Pricing, Features & Alternatives (2026)`;
   const description = model.supported
-    ? `${model.name} by ${model.provider}: ${model.tagline} Access through Maridian Gateway with OpenAI-compatible API, regional routing, and usage controls.`
+    ? `${model.name} by ${model.provider}: ${model.tagline} Per-token pricing, cost calculator, comparison with other models, and OpenAI-compatible API integration through BestLLM.`
     : `${model.name} by ${model.provider}: ${model.tagline} Complete pricing breakdown, API integration guide, and comparison with alternatives.`;
 
   return {
@@ -44,22 +44,40 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 /* ------------------------------------------------------------------ */
 
 function JsonLd({ model }: { model: ModelPage }) {
-  const jsonLd = {
+  const parsePrice = (v: string | undefined): number | null => {
+    if (!v || v === "Free" || v === "—" || v === "N/A") return null;
+    const n = parseFloat(v.replace(/[^0-9.]/g, ""));
+    return Number.isFinite(n) ? n : null;
+  };
+
+  const numericPrices = model.pricing
+    .flatMap((p) => [parsePrice(p.inputPerM), parsePrice(p.outputPerM)])
+    .filter((v): v is number => v !== null);
+
+  const lowPrice = numericPrices.length ? Math.min(...numericPrices) : null;
+  const highPrice = numericPrices.length ? Math.max(...numericPrices) : null;
+
+  const jsonLd: Record<string, unknown> = {
     "@context": "https://schema.org",
     "@type": "Product",
     name: model.name,
     description: model.description,
     brand: { "@type": "Brand", name: model.provider },
     category: model.supported ? "LLM API Service" : "AI Model Reference",
-    offers: model.pricing.length
-      ? {
-          "@type": "AggregateOffer",
-          lowPrice: model.pricing[0]?.outputPerM ?? model.pricing[0]?.inputPerM,
-          priceCurrency: "USD",
-          offerCount: model.pricing.length,
-        }
-      : undefined,
   };
+
+  if (lowPrice !== null) {
+    const offers: Record<string, unknown> = {
+      "@type": "AggregateOffer",
+      lowPrice,
+      priceCurrency: "USD",
+      offerCount: model.pricing.length,
+    };
+    if (highPrice !== null && highPrice > lowPrice) {
+      offers.highPrice = highPrice;
+    }
+    jsonLd.offers = offers;
+  }
 
   return (
     <script
@@ -70,8 +88,37 @@ function JsonLd({ model }: { model: ModelPage }) {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Nav (matches existing marketing pages)                             */
+/*  Helpers                                                            */
 /* ------------------------------------------------------------------ */
+
+function parsePriceNum(v: string): number {
+  if (!v || v === "—" || v === "N/A" || v === "Free") return 0;
+  const n = parseFloat(v.replace(/[^0-9.]/g, ""));
+  return Number.isFinite(n) ? n : 0;
+}
+
+function formatUsd(n: number): string {
+  if (n >= 1) return `$${n.toFixed(2)}`;
+  if (n >= 0.01) return `$${n.toFixed(3)}`;
+  return `$${n.toFixed(4)}`;
+}
+
+function getInputPrice(m: ModelPage): number {
+  return parsePriceNum(m.pricing.find((p) => p.inputPerM !== "—" && p.inputPerM !== "N/A" && p.inputPerM !== "Free")?.inputPerM ?? "0");
+}
+
+function getOutputPrice(m: ModelPage): number {
+  return parsePriceNum(m.pricing.find((p) => p.outputPerM !== "—" && p.outputPerM !== "N/A" && p.outputPerM !== "Free")?.outputPerM ?? "0");
+}
+
+function SpecRow({ label, value }: { label: string; value: string }) {
+  return (
+    <tr>
+      <td style={{ fontWeight: 500, width: "40%" }}>{label}</td>
+      <td>{value}</td>
+    </tr>
+  );
+}
 
 function Nav() {
   return (
@@ -87,6 +134,244 @@ function Nav() {
         Get API Key →
       </Link>
     </nav>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Cost calculator section                                            */
+/* ------------------------------------------------------------------ */
+
+function CostCalculator({ model }: { model: ModelPage }) {
+  const inputPrice = getInputPrice(model);
+  const outputPrice = getOutputPrice(model);
+
+  const scenarios = [
+    { label: "10K requests", requests: 10_000, inputTokens: 500, outputTokens: 200 },
+    { label: "100K requests", requests: 100_000, inputTokens: 500, outputTokens: 200 },
+    { label: "1M requests", requests: 1_000_000, inputTokens: 500, outputTokens: 200 },
+  ];
+
+  return (
+    <section className="article-section">
+      <h2>Cost calculator: what you actually spend</h2>
+      <p>
+        Estimated cost for {model.name} at BestLLM's per-token pricing. Assumes an average of
+        500 input tokens and 200 output tokens per request — adjust for your actual workload.
+        All prices are cost pass-through with no hidden markup.
+      </p>
+      <div className="article-table-wrap">
+        <table className="article-table">
+          <thead>
+            <tr>
+              <th>Volume</th>
+              <th style={{ textAlign: "right" }}>Input tokens</th>
+              <th style={{ textAlign: "right" }}>Output tokens</th>
+              <th style={{ textAlign: "right" }}>Total cost</th>
+            </tr>
+          </thead>
+          <tbody>
+            {scenarios.map((s) => {
+              const totalInput = s.requests * s.inputTokens;
+              const totalOutput = s.requests * s.outputTokens;
+              const cost = (totalInput / 1_000_000) * inputPrice + (totalOutput / 1_000_000) * outputPrice;
+              return (
+                <tr key={s.label}>
+                  <td style={{ fontWeight: 500 }}>{s.label}</td>
+                  <td style={{ textAlign: "right" }}>{(totalInput / 1_000_000).toFixed(1)}M</td>
+                  <td style={{ textAlign: "right" }}>{(totalOutput / 1_000_000).toFixed(1)}M</td>
+                  <td style={{ textAlign: "right", fontWeight: 600 }}>{formatUsd(cost)}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      <p style={{ fontSize: "0.85rem", color: "#888", marginTop: "0.5rem" }}>
+        Input: {formatUsd(inputPrice)}/M tokens · Output: {formatUsd(outputPrice)}/M tokens.
+        See the <Link href="/pricing">full pricing table</Link> for all models.
+      </p>
+    </section>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Model comparison table                                             */
+/* ------------------------------------------------------------------ */
+
+function ComparisonTable({ model }: { model: ModelPage }) {
+  const supported = getSupportedModels();
+  const others = supported.filter((m) => m.slug !== model.slug);
+
+  return (
+    <section className="article-section">
+      <h2>How {model.name} compares to other models</h2>
+      <p>
+        Side-by-side pricing and specs for all models available through BestLLM.{" "}
+        {model.name} is highlighted. Switch models by changing the <code>model</code> field —
+        same endpoint, same SDK, same API key.
+      </p>
+      <div style={{ overflowX: "auto" }}>
+        <table className="article-table" style={{ minWidth: "600px" }}>
+          <thead>
+            <tr>
+              <th>Model</th>
+              <th style={{ textAlign: "right" }}>Input /M</th>
+              <th style={{ textAlign: "right" }}>Output /M</th>
+              <th style={{ textAlign: "right" }}>Context</th>
+              <th>Best for</th>
+            </tr>
+          </thead>
+          <tbody>
+            {/* Current model row — highlighted */}
+            <tr style={{ background: "#f0f7ff" }}>
+              <td style={{ fontWeight: 700 }}>{model.name} ←</td>
+              <td style={{ textAlign: "right", fontWeight: 600 }}>
+                {model.pricing.find((p) => p.inputPerM !== "—")?.inputPerM ?? "—"}
+              </td>
+              <td style={{ textAlign: "right", fontWeight: 600 }}>
+                {model.pricing.find((p) => p.outputPerM !== "—")?.outputPerM ?? "—"}
+              </td>
+              <td style={{ textAlign: "right" }}>{model.contextWindow}</td>
+              <td style={{ fontSize: "0.85rem" }}>{model.bestFor.slice(0, 60)}…</td>
+            </tr>
+            {/* Other models */}
+            {others.map((m) => (
+              <tr key={m.slug}>
+                <td>
+                  <Link href={`/models/${m.slug}`} style={{ fontWeight: 500 }}>
+                    {m.name}
+                  </Link>
+                </td>
+                <td style={{ textAlign: "right" }}>
+                  {m.pricing.find((p) => p.inputPerM !== "—")?.inputPerM ?? "—"}
+                </td>
+                <td style={{ textAlign: "right" }}>
+                  {m.pricing.find((p) => p.outputPerM !== "—")?.outputPerM ?? "—"}
+                </td>
+                <td style={{ textAlign: "right" }}>{m.contextWindow}</td>
+                <td style={{ fontSize: "0.85rem" }}>{m.bestFor.slice(0, 60)}…</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p style={{ fontSize: "0.9rem", marginTop: "0.75rem" }}>
+        Read our <Link href="/blog/best-chinese-models-2026">Best Chinese AI Models 2026</Link>{" "}
+        guide for a full comparison with benchmarks and use-case recommendations.
+      </p>
+    </section>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  When to switch section                                             */
+/* ------------------------------------------------------------------ */
+
+function SwitchingGuide({ model }: { model: ModelPage }) {
+  const supported = getSupportedModels();
+  const inputPrice = getInputPrice(model);
+  const cheaper = supported.filter((m) => m.slug !== model.slug && getInputPrice(m) < inputPrice);
+  const biggerContext = supported.filter((m) => m.slug !== model.slug && parseInt(m.contextWindow) > parseInt(model.contextWindow));
+
+  return (
+    <section className="article-section">
+      <h2>When to consider switching from {model.name}</h2>
+      <p>
+        {model.name} is a strong choice for {model.bestFor.toLowerCase()} But depending on your
+        workload, another model might fit better:
+      </p>
+      <ul>
+        {cheaper.length > 0 && (
+          <li>
+            <strong>Need lower cost?</strong>{" "}
+            {cheaper.map((m, i) => (
+              <span key={m.slug}>
+                {i > 0 && ", "}
+                <Link href={`/models/${m.slug}`}>{m.name}</Link>
+              </span>
+            ))}{" "}
+            {cheaper.length === 1 ? "has" : "have"} a lower input price at{" "}
+            {cheaper.map((m) => m.pricing.find((p) => p.inputPerM !== "—")?.inputPerM ?? "—").join(" / ")}/M tokens.
+          </li>
+        )}
+        {biggerContext.length > 0 && (
+          <li>
+            <strong>Need more context?</strong>{" "}
+            {biggerContext.map((m, i) => (
+              <span key={m.slug}>
+                {i > 0 && ", "}
+                <Link href={`/models/${m.slug}`}>{m.name}</Link>
+              </span>
+            ))}{" "}
+            {biggerContext.length === 1 ? "offers" : "offer"} up to{" "}
+            {biggerContext.reduce((max, m) => parseInt(m.contextWindow) > parseInt(max.contextWindow) ? m : max, model).contextWindow} context.
+          </li>
+        )}
+        <li>
+          <strong>Switching is instant.</strong> Change the <code>model</code> field in your
+          API call — same endpoint, same SDK, same API key. No code changes beyond that one
+          field. See the <Link href="/docs">API documentation</Link> for examples.
+        </li>
+      </ul>
+    </section>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  FAQ section                                                        */
+/* ------------------------------------------------------------------ */
+
+function ModelFaq({ model }: { model: ModelPage }) {
+  const faqs = model.supported ? [
+    {
+      q: `What is the pricing for ${model.name} through BestLLM?`,
+      a: `${model.name} costs ${model.pricing.find((p) => p.inputPerM !== "—")?.inputPerM ?? "—"} per million input tokens and ${model.pricing.find((p) => p.outputPerM !== "—")?.outputPerM ?? "—"} per million output tokens through BestLLM. Pricing is cost pass-through with no hidden markup. You pay only for the tokens you use — no minimum commitments, no per-request surcharges.`,
+    },
+    {
+      q: `What is the context window for ${model.name}?`,
+      a: `${model.name} has a ${model.contextWindow}-token context window with a maximum output of ${model.maxOutput} tokens. This means you can fit ${model.contextWindow === "1M" ? "up to 1 million tokens" : `up to ${model.contextWindow} tokens`} of input — roughly ${model.contextWindow === "1M" ? "a full codebase or book-length document" : model.contextWindow === "256K" ? "a long document or moderate codebase" : "a medium-length document"} in a single request.`,
+    },
+    {
+      q: `Can I use ${model.name} with the OpenAI SDK?`,
+      a: `Yes. ${model.name} is accessible through BestLLM's OpenAI-compatible API. Set the base URL to https://api.bestllm.dev/v1 and use your BestLLM API key. The official OpenAI Python, Node.js, and TypeScript SDKs all work without modification beyond the base URL and key.`,
+    },
+    {
+      q: `How does ${model.name} compare to other models on BestLLM?`,
+      a: `${model.name} is best suited for ${model.bestFor.toLowerCase()} Other models on BestLLM include ${getSupportedModels().filter((m) => m.slug !== model.slug).slice(0, 3).map((m) => m.name).join(", ")} — each optimized for different workloads. See the comparison table above or read our Best Chinese AI Models 2026 guide for benchmarks.`,
+    },
+    {
+      q: `Is ${model.name} available for production use?`,
+      a: `Yes — ${model.name} is live and routable through BestLLM with regional routing (US and EU), workspace-level spend controls, and an immutable billing ledger. Create a workspace, generate an API key, and start making requests immediately.`,
+    },
+  ] : [
+    {
+      q: `Is ${model.name} available through BestLLM?`,
+      a: `${model.name} is not currently available through the BestLLM API. This page is kept as a reference with pricing and specs. For production workloads, check our supported models — ${getSupportedModels().slice(0, 3).map((m) => m.name).join(", ")} — which are live and accessible through the same OpenAI-compatible API.`,
+    },
+    {
+      q: `What is the pricing for ${model.name}?`,
+      a: `${model.name} pricing is ${model.pricing.map((p) => `${p.tier}: ${p.inputPerM !== "—" ? p.inputPerM + " input" : ""}${p.outputPerM !== "—" ? " / " + p.outputPerM + " output" : ""}`).filter(Boolean).join(", ")}. This reflects direct provider pricing; availability through BestLLM may differ.`,
+    },
+    {
+      q: `What should I use instead of ${model.name}?`,
+      a: `If you were using ${model.name}, the closest supported alternative on BestLLM is ${getSupportedModels().find((m) => m.provider === model.provider)?.name ?? getSupportedModels()[0].name}. It offers a ${getSupportedModels().find((m) => m.provider === model.provider)?.contextWindow ?? getSupportedModels()[0].contextWindow} context window and is accessible through the same OpenAI-compatible API.`,
+    },
+  ];
+
+  return (
+    <section className="article-section">
+      <h2>Frequently asked questions</h2>
+      {faqs.map((faq) => (
+        <details key={faq.q} style={{ marginBottom: "1rem" }}>
+          <summary style={{ cursor: "pointer", fontWeight: 600, padding: "0.5rem 0" }}>
+            {faq.q}
+          </summary>
+          <p style={{ padding: "0.5rem 0", color: "#555", lineHeight: 1.7 }}>
+            {faq.a}
+          </p>
+        </details>
+      ))}
+    </section>
   );
 }
 
@@ -116,14 +401,17 @@ export default async function ModelPage({ params }: { params: Promise<{ slug: st
       {/* Hero */}
       <section className="content-hero">
         <span className="feature-number">
-          {model.supported ? "AVAILABLE ON MARIDIAN" : "MODEL REFERENCE"}
+          {model.supported ? "AVAILABLE ON BESTLLM" : "MODEL REFERENCE"}
         </span>
-        <h1>{model.name}</h1>
+        <h1>{model.name}{model.supported ? ` API Pricing & Integration` : ` API: Pricing, Features & Alternatives`}</h1>
         <p style={{ fontSize: "1.1rem", maxWidth: "42rem" }}>{model.description}</p>
         {model.supported && (
-          <div style={{ marginTop: "1.5rem" }}>
+          <div style={{ marginTop: "1.5rem", display: "flex", gap: "0.75rem" }}>
             <Link href="/pricing" className="article-btn article-btn-primary">
-              Start using {model.name} →
+              Get API Key →
+            </Link>
+            <Link href="/docs" className="article-btn">
+              Read the Docs →
             </Link>
           </div>
         )}
@@ -131,7 +419,7 @@ export default async function ModelPage({ params }: { params: Promise<{ slug: st
 
       {/* Key specs */}
       <section className="article-section">
-        <h2>Key Specifications</h2>
+        <h2>Key specifications</h2>
         <div className="article-table-wrap">
           <table className="article-table">
             <tbody>
@@ -148,7 +436,12 @@ export default async function ModelPage({ params }: { params: Promise<{ slug: st
 
       {/* Pricing */}
       <section className="article-section">
-        <h2>Pricing</h2>
+        <h2>{model.name} pricing</h2>
+        <p>
+          {model.supported
+            ? `Per-token pricing through BestLLM. Cost pass-through with no hidden markup — the price you see is what the ledger bills.`
+            : `Reference pricing for ${model.name}. Not currently available through BestLLM.`}
+        </p>
         <div className="article-table-wrap">
           <table className="article-table">
             <thead>
@@ -162,8 +455,24 @@ export default async function ModelPage({ params }: { params: Promise<{ slug: st
               {model.pricing.map((p) => (
                 <tr key={p.tier}>
                   <td style={{ fontWeight: 500 }}>{p.tier}</td>
-                  <td style={{ textAlign: "right" }}>{p.inputPerM}</td>
-                  <td style={{ textAlign: "right" }}>{p.outputPerM}</td>
+                  <td style={{ textAlign: "right" }}>
+                    {p.inputPerM === "—" || p.inputPerM === "N/A" || p.inputPerM === "Free" ? (
+                      <span style={{ color: "var(--muted)", fontStyle: "italic" }}>
+                        {p.inputPerM === "Free" ? "Free" : "—"}
+                      </span>
+                    ) : (
+                      p.inputPerM
+                    )}
+                  </td>
+                  <td style={{ textAlign: "right" }}>
+                    {p.outputPerM === "—" || p.outputPerM === "N/A" || p.outputPerM === "Free" ? (
+                      <span style={{ color: "var(--muted)", fontStyle: "italic" }}>
+                        {p.outputPerM === "Free" ? "Free" : "—"}
+                      </span>
+                    ) : (
+                      p.outputPerM
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -171,9 +480,17 @@ export default async function ModelPage({ params }: { params: Promise<{ slug: st
         </div>
       </section>
 
+      {/* Cost calculator — supported models only */}
+      {model.supported && <CostCalculator model={model} />}
+
       {/* Features */}
       <section className="article-section">
-        <h2>Features</h2>
+        <h2>Features and capabilities</h2>
+        <p>
+          {model.supported
+            ? `${model.name} through BestLLM includes all standard features of the OpenAI-compatible API:`
+            : `Key capabilities of ${model.name}:`}`
+        </p>
         <ul>
           {model.features.map((f) => (
             <li key={f}>{f}</li>
@@ -183,30 +500,45 @@ export default async function ModelPage({ params }: { params: Promise<{ slug: st
 
       {/* API Example */}
       <section className="article-section">
-        <h2>API Integration</h2>
+        <h2>API integration example</h2>
         <p>
           {model.supported
-            ? `Use the OpenAI-compatible API through Maridian Gateway:`
-            : `Direct API access:`}
+            ? `Call ${model.name} through the BestLLM OpenAI-compatible API. Works with the official OpenAI SDK — just set the base URL to https://api.bestllm.dev/v1 and use your BestLLM API key.`
+            : `Direct API access for ${model.name}:`}
         </p>
         <pre className="article-code">
           <code>{model.apiExample}</code>
         </pre>
+        {model.supported && (
+          <p style={{ fontSize: "0.9rem", marginTop: "0.5rem" }}>
+            See the <Link href="/docs">full API documentation</Link> for Python SDK, Node.js SDK,
+            streaming, and error handling examples.
+          </p>
+        )}
       </section>
+
+      {/* Comparison table — supported models only */}
+      {model.supported && <ComparisonTable model={model} />}
+
+      {/* Switching guide — supported models only */}
+      {model.supported && <SwitchingGuide model={model} />}
 
       {/* Best For */}
       <section className="article-section">
-        <h2>Best For</h2>
+        <h2>Best for</h2>
         <p>{model.bestFor}</p>
       </section>
 
-      {/* CTA */}
+      {/* FAQ */}
+      <ModelFaq model={model} />
+
+      {/* CTA for editorial models */}
       {!model.supported && (
         <section className="article-cta">
-          <h2>Need Text Generation Instead?</h2>
+          <h2>Need a live model instead?</h2>
           <p>
-            Maridian Gateway offers DeepSeek, Qwen, Kimi, and GLM through one OpenAI-compatible API
-            with regional routing, spend controls, and an immutable billing ledger.
+            BestLLM offers DeepSeek, Qwen, Kimi, GLM, and MiniMax through one OpenAI-compatible
+            API with regional routing, spend controls, and transparent per-token billing.
           </p>
           <div className="article-cta-actions">
             <Link href="/models" className="article-btn article-btn-primary">
@@ -219,10 +551,29 @@ export default async function ModelPage({ params }: { params: Promise<{ slug: st
         </section>
       )}
 
+      {/* CTA for supported models */}
+      {model.supported && (
+        <section className="article-cta">
+          <h2>Start using {model.name} today</h2>
+          <p>
+            One API key. Every supported model. OpenAI-compatible format. Switch to {model.name}{" "}
+            by changing the <code>model</code> field — no SDK changes required.
+          </p>
+          <div className="article-cta-actions">
+            <Link href="/pricing" className="article-btn article-btn-primary">
+              Get Your API Key →
+            </Link>
+            <Link href="/docs" className="article-btn article-btn-ghost">
+              Read the Docs
+            </Link>
+          </div>
+        </section>
+      )}
+
       {/* Links */}
       {model.docsUrl && (
         <section className="article-section">
-          <h2>Official Documentation</h2>
+          <h2>Official documentation</h2>
           <a href={model.docsUrl} target="_blank" rel="noopener noreferrer">
             {model.docsUrl}
           </a>
@@ -232,22 +583,17 @@ export default async function ModelPage({ params }: { params: Promise<{ slug: st
       {/* Footer */}
       <footer className="marketing-footer">
         <Logo />
-        <span>Model access without operational noise.</span>
-        <span>© 2026 Maridian Gateway</span>
+        <span>OpenAI-compatible access to DeepSeek, Qwen, Kimi, GLM, and MiniMax.</span>
+        <span>© 2026 BestLLM</span>
+        <div className="footer-badges">
+          <a href="https://thesaasdir.com" rel="dofollow">
+            <img src="/badges/thesaasdir.svg" alt="Featured on TheSaaSDir" width="160" height="44" />
+          </a>
+          <a href="https://semilaunch.com" target="_blank" rel="noopener">
+            <img src="/badges/semilaunch.png" alt="Featured on SemiLaunch" width="220" height="77" />
+          </a>
+        </div>
       </footer>
     </main>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/*  Helpers                                                            */
-/* ------------------------------------------------------------------ */
-
-function SpecRow({ label, value }: { label: string; value: string }) {
-  return (
-    <tr>
-      <td style={{ fontWeight: 500, width: "40%" }}>{label}</td>
-      <td>{value}</td>
-    </tr>
   );
 }
