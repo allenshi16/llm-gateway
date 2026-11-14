@@ -428,7 +428,7 @@ curl -X POST https://api.bestllm.dev/v1/chat/completions \\
         </div>
       </section>
 
-      <p style={{ maxWidth: "44rem" }}>Read next: <Link href="/blog/deepseek-vs-qwen">DeepSeek vs Qwen comparison</Link> · <Link href="/blog/gpt6-vs-chinese-llms">GPT-6 vs Chinese LLMs routing guide</Link>.</p>
+      <p style={{ maxWidth: "44rem" }}>Read next: <Link href="/blog/deepseek-vs-qwen">DeepSeek vs Qwen comparison</Link> · <Link href="/blog/gpt6-vs-chinese-llms">GPT-6 vs Chinese LLMs routing guide</Link> · <Link href="/alternatives/openrouter">OpenRouter alternative for Chinese models</Link>.</p>
 
       {/* FAQ */}
       <section className="article-section">

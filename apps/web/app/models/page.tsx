@@ -49,7 +49,8 @@ export default function ModelsPage() {
             These {supported.length} models are live and accessible through the OpenAI-compatible
             API at <code>api.bestllm.dev/v1</code>. Each route includes regional routing,
             workspace-level spend controls, and per-token billing. Click through for full
-            pricing breakdowns and integration examples.
+            pricing breakdowns and integration examples.{" "}
+            <Link href="/alternatives/openrouter">Migrating from OpenRouter? See the comparison →</Link>
           </p>
           <div className="model-spotlight-grid">
             {supported.map((m) => (

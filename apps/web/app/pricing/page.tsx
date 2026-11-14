@@ -156,6 +156,7 @@ export default function PricingPage() {
           All model prices are cost pass-through. See individual model pages for full pricing
           details, context windows, and API examples. For a comprehensive model comparison, read
           our <Link href="/blog/best-chinese-models-2026">Best Chinese AI Models 2026 guide</Link>.
+          Comparing providers? <Link href="/alternatives/openrouter">OpenRouter vs BestLLM →</Link>
         </p>
 
         <h2 style={{ marginTop: "2rem" }}>How billing works</h2>

@@ -199,7 +199,8 @@ response = client.chat.completions.create(
             workspace-level spend controls, and the ability to approve or block model routes per
             team. If you are already using OpenRouter, BestLLM adds regional policy enforcement,
             provider-level fallback rules, and an immutable ledger that maps every request to a
-            line-item charge — not a monthly aggregate.
+            line-item charge — not a monthly aggregate.{" "}
+            <Link href="/alternatives/openrouter">Read the full OpenRouter alternative guide →</Link>
           </p>
         </Card>
         <Card>
@@ -297,7 +298,8 @@ response = client.chat.completions.create(
               US and EU regional routing, workspace-level spend controls, RBAC, and an immutable
               billing ledger. OpenRouter covers a broader global model catalog. If your workload
               is primarily DeepSeek, Qwen, Kimi, or GLM and you need compliance-aware routing
-              and team-level budget controls, BestLLM is purpose-built for that use case.
+              and team-level budget controls, BestLLM is purpose-built for that use case.{" "}
+              <Link href="/alternatives/openrouter">See the full OpenRouter vs BestLLM comparison →</Link>
             </p>
           </details>
 

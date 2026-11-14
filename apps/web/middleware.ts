@@ -19,6 +19,8 @@ export function middleware(request: Request) {
 
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-nonce", nonce);
+  // Next reads the nonce from the request CSP header to stamp its own scripts/styles.
+  requestHeaders.set("Content-Security-Policy", directives);
 
   const response = NextResponse.next({ request: { headers: requestHeaders } });
   response.headers.set("Content-Security-Policy", directives);
