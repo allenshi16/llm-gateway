@@ -3,7 +3,7 @@ import { ContentCard, MarketingPage } from "../marketing-page";
 import { getSupportedModels } from "@gateway/brand/models";
 
 export const metadata = {
-  title: "LLM API Documentation — Quickstart & Reference | BestLLM",
+  title: { absolute: "LLM API Documentation — Quickstart & Reference | BestLLM" },
   description:
     "BestLLM API documentation: quickstart guide, OpenAI-compatible chat completions endpoint, authentication, request and response examples, error codes, rate limits, and SDK setup for DeepSeek, Qwen, Kimi, GLM.",
 };

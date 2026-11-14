@@ -239,3 +239,20 @@ html { scroll-behavior:smooth; }
   .alt-subnav .alt-subnav-cta { display:none; }
   .alt-calc { padding:1.4rem; }
 }
+
+/* ================================================================= */
+/*  Model page: CSP-safe classes (replace former inline styles)      */
+/* ================================================================= */
+.spec-label { font-weight:500; width:40%; }
+.article-table .t-label { font-weight:500; }
+.article-table .t-strong { font-weight:600; }
+.article-table .t-bold { font-weight:700; }
+.article-table .t-small { font-size:.85rem; }
+.article-table .t-dash { color:var(--muted); font-style:italic; }
+.article-table tr.t-current td { background:rgba(242,184,75,.07); }
+.article-table.t-wide { min-width:600px; }
+.content-hero-actions { display:flex; gap:.75rem; margin-top:1.5rem; flex-wrap:wrap; }
+.article-note { margin-top:.5rem; font-size:.9rem; color:var(--muted); }
+.article-faq details { margin-bottom:1rem; }
+.article-faq summary { cursor:pointer; font-weight:600; padding:.5rem 0; }
+.article-faq details p { padding:.5rem 0; color:var(--muted); line-height:1.7; }

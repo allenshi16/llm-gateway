@@ -3,7 +3,7 @@ import { Logo, Badge } from "@gateway/ui";
 import { modelCatalog } from "@gateway/brand/models";
 
 export const metadata = {
-  title: "Supported LLM Models — DeepSeek, Qwen, Kimi, GLM, MiniMax Pricing | BestLLM",
+  title: { absolute: "Supported LLM Models — DeepSeek, Qwen, Kimi, GLM, MiniMax Pricing | BestLLM" },
   description:
     "Explore DeepSeek, Qwen, Kimi, GLM, and MiniMax models through one OpenAI-compatible API. Pricing per million tokens, context windows, benchmarks, and integration guides for every model.",
 };

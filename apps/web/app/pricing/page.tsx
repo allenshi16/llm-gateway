@@ -3,7 +3,7 @@ import { ContentCard, MarketingPage } from "../marketing-page";
 import { getSupportedModels } from "@gateway/brand/models";
 
 export const metadata = {
-  title: "LLM API Pricing — DeepSeek, Qwen, Kimi, GLM, MiniMax | BestLLM",
+  title: { absolute: "LLM API Pricing — DeepSeek, Qwen, Kimi, GLM, MiniMax | BestLLM" },
   description:
     "Transparent per-token LLM API pricing. DeepSeek Chat from $0.30/M input, Qwen Plus from $0.30/M, MiniMax M3 from $0.31/M, GLM-5 from $0.60/M. No hidden fees. Choose Starter, Team, or Enterprise.",
 };

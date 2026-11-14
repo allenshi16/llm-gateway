@@ -82,13 +82,7 @@ const models = [
     highlight: "Qwen3-generation mid-tier workhorse",
   },
   {
-    rank: 8, name: "Kimi K2", provider: "Moonshot AI", type: "Text",
-    context: "128K", input: "$0.60", output: "$1.80", bestFor: "Legacy Long Context",
-    supported: false, slug: "kimi-k2",
-    highlight: "Previous-gen 1T/32B MoE — superseded by Kimi K3",
-  },
-  {
-    rank: 9, name: "MiniMax H3", provider: "MiniMax", type: "Video",
+    rank: 8, name: "MiniMax H3", provider: "MiniMax", type: "Video",
     context: "N/A", input: "—", output: "$0.13/sec", bestFor: "Video Generation",
     supported: false, slug: "minimax-h3",
     highlight: "2K video + native audio at 1/3 competitor pricing",
@@ -459,8 +453,10 @@ curl -X POST https://api.bestllm.dev/v1/chat/completions \\
         <h3>What about MiniMax H3 — is it a text model?</h3>
         <p>
           No — MiniMax H3 is a video generation model that creates 2K video with native stereo audio.
-          For text LLM APIs, use DeepSeek, Qwen, Kimi, or GLM. See the{" "}
-          <Link href="/blog/minimax-h3">MiniMax H3 guide</Link> for the full breakdown.
+          For text LLM APIs, use DeepSeek, Qwen, Kimi, or GLM (or MiniMax M3). See the{" "}
+          <Link href="/models/minimax-h3">H3 model page</Link> for specs and pricing, or our{" "}
+          <Link href="/blog/minimax-h3">MiniMax selection &amp; integration tutorial</Link> to choose
+          and wire it up.
         </p>
 
         <h3>Can I use these models in the EU?</h3>

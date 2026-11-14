@@ -114,7 +114,7 @@ function getOutputPrice(m: ModelPage): number {
 function SpecRow({ label, value }: { label: string; value: string }) {
   return (
     <tr>
-      <td style={{ fontWeight: 500, width: "40%" }}>{label}</td>
+      <td className="spec-label">{label}</td>
       <td>{value}</td>
     </tr>
   );
@@ -164,9 +164,9 @@ function CostCalculator({ model }: { model: ModelPage }) {
           <thead>
             <tr>
               <th>Volume</th>
-              <th style={{ textAlign: "right" }}>Input tokens</th>
-              <th style={{ textAlign: "right" }}>Output tokens</th>
-              <th style={{ textAlign: "right" }}>Total cost</th>
+              <th align="right">Input tokens</th>
+              <th align="right">Output tokens</th>
+              <th align="right">Total cost</th>
             </tr>
           </thead>
           <tbody>
@@ -176,17 +176,17 @@ function CostCalculator({ model }: { model: ModelPage }) {
               const cost = (totalInput / 1_000_000) * inputPrice + (totalOutput / 1_000_000) * outputPrice;
               return (
                 <tr key={s.label}>
-                  <td style={{ fontWeight: 500 }}>{s.label}</td>
-                  <td style={{ textAlign: "right" }}>{(totalInput / 1_000_000).toFixed(1)}M</td>
-                  <td style={{ textAlign: "right" }}>{(totalOutput / 1_000_000).toFixed(1)}M</td>
-                  <td style={{ textAlign: "right", fontWeight: 600 }}>{formatUsd(cost)}</td>
+                  <td className="t-label">{s.label}</td>
+                  <td align="right">{(totalInput / 1_000_000).toFixed(1)}M</td>
+                  <td align="right">{(totalOutput / 1_000_000).toFixed(1)}M</td>
+                  <td align="right" className="t-strong">{formatUsd(cost)}</td>
                 </tr>
               );
             })}
           </tbody>
         </table>
       </div>
-      <p style={{ fontSize: "0.85rem", color: "#888", marginTop: "0.5rem" }}>
+      <p className="article-note">
         Input: {formatUsd(inputPrice)}/M tokens · Output: {formatUsd(outputPrice)}/M tokens.
         See the <Link href="/pricing">full pricing table</Link> for all models.
       </p>
@@ -210,52 +210,52 @@ function ComparisonTable({ model }: { model: ModelPage }) {
         {model.name} is highlighted. Switch models by changing the <code>model</code> field —
         same endpoint, same SDK, same API key.
       </p>
-      <div style={{ overflowX: "auto" }}>
-        <table className="article-table" style={{ minWidth: "600px" }}>
+      <div className="article-table-wrap">
+        <table className="article-table t-wide">
           <thead>
             <tr>
               <th>Model</th>
-              <th style={{ textAlign: "right" }}>Input /M</th>
-              <th style={{ textAlign: "right" }}>Output /M</th>
-              <th style={{ textAlign: "right" }}>Context</th>
+              <th align="right">Input /M</th>
+              <th align="right">Output /M</th>
+              <th align="right">Context</th>
               <th>Best for</th>
             </tr>
           </thead>
           <tbody>
             {/* Current model row — highlighted */}
-            <tr style={{ background: "#f0f7ff" }}>
-              <td style={{ fontWeight: 700 }}>{model.name} ←</td>
-              <td style={{ textAlign: "right", fontWeight: 600 }}>
+            <tr className="t-current">
+              <td className="t-bold">{model.name} ←</td>
+              <td align="right" className="t-strong">
                 {model.pricing.find((p) => p.inputPerM !== "—")?.inputPerM ?? "—"}
               </td>
-              <td style={{ textAlign: "right", fontWeight: 600 }}>
+              <td align="right" className="t-strong">
                 {model.pricing.find((p) => p.outputPerM !== "—")?.outputPerM ?? "—"}
               </td>
-              <td style={{ textAlign: "right" }}>{model.contextWindow}</td>
-              <td style={{ fontSize: "0.85rem" }}>{model.bestFor.slice(0, 60)}…</td>
+              <td align="right">{model.contextWindow}</td>
+              <td className="t-small">{model.bestFor.slice(0, 60)}…</td>
             </tr>
             {/* Other models */}
             {others.map((m) => (
               <tr key={m.slug}>
                 <td>
-                  <Link href={`/models/${m.slug}`} style={{ fontWeight: 500 }}>
+                  <Link href={`/models/${m.slug}`} className="t-label">
                     {m.name}
                   </Link>
                 </td>
-                <td style={{ textAlign: "right" }}>
+                <td align="right">
                   {m.pricing.find((p) => p.inputPerM !== "—")?.inputPerM ?? "—"}
                 </td>
-                <td style={{ textAlign: "right" }}>
+                <td align="right">
                   {m.pricing.find((p) => p.outputPerM !== "—")?.outputPerM ?? "—"}
                 </td>
-                <td style={{ textAlign: "right" }}>{m.contextWindow}</td>
-                <td style={{ fontSize: "0.85rem" }}>{m.bestFor.slice(0, 60)}…</td>
+                <td align="right">{m.contextWindow}</td>
+                <td className="t-small">{m.bestFor.slice(0, 60)}…</td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-      <p style={{ fontSize: "0.9rem", marginTop: "0.75rem" }}>
+      <p className="article-note">
         Read our <Link href="/blog/best-chinese-models-2026">Best Chinese AI Models 2026</Link>{" "}
         guide for a full comparison with benchmarks and use-case recommendations.
       </p>
@@ -359,14 +359,14 @@ function ModelFaq({ model }: { model: ModelPage }) {
   ];
 
   return (
-    <section className="article-section">
+    <section className="article-section article-faq">
       <h2>Frequently asked questions</h2>
       {faqs.map((faq) => (
-        <details key={faq.q} style={{ marginBottom: "1rem" }}>
-          <summary style={{ cursor: "pointer", fontWeight: 600, padding: "0.5rem 0" }}>
+        <details key={faq.q}>
+          <summary>
             {faq.q}
           </summary>
-          <p style={{ padding: "0.5rem 0", color: "#555", lineHeight: 1.7 }}>
+          <p>
             {faq.a}
           </p>
         </details>
@@ -404,9 +404,9 @@ export default async function ModelPage({ params }: { params: Promise<{ slug: st
           {model.supported ? "AVAILABLE ON BESTLLM" : "MODEL REFERENCE"}
         </span>
         <h1>{model.name}{model.supported ? ` API Pricing & Integration` : ` API: Pricing, Features & Alternatives`}</h1>
-        <p style={{ fontSize: "1.1rem", maxWidth: "42rem" }}>{model.description}</p>
+        <p>{model.description}</p>
         {model.supported && (
-          <div style={{ marginTop: "1.5rem", display: "flex", gap: "0.75rem" }}>
+          <div className="content-hero-actions">
             <Link href="/pricing" className="article-btn article-btn-primary">
               Get API Key →
             </Link>
@@ -447,26 +447,26 @@ export default async function ModelPage({ params }: { params: Promise<{ slug: st
             <thead>
               <tr>
                 <th>Tier</th>
-                <th style={{ textAlign: "right" }}>Input (per 1M tokens)</th>
-                <th style={{ textAlign: "right" }}>Output (per 1M tokens)</th>
+                <th align="right">Input (per 1M tokens)</th>
+                <th align="right">Output (per 1M tokens)</th>
               </tr>
             </thead>
             <tbody>
               {model.pricing.map((p) => (
                 <tr key={p.tier}>
-                  <td style={{ fontWeight: 500 }}>{p.tier}</td>
-                  <td style={{ textAlign: "right" }}>
+                  <td className="t-label">{p.tier}</td>
+                  <td align="right">
                     {p.inputPerM === "—" || p.inputPerM === "N/A" || p.inputPerM === "Free" ? (
-                      <span style={{ color: "var(--muted)", fontStyle: "italic" }}>
+                      <span className="t-dash">
                         {p.inputPerM === "Free" ? "Free" : "—"}
                       </span>
                     ) : (
                       p.inputPerM
                     )}
                   </td>
-                  <td style={{ textAlign: "right" }}>
+                  <td align="right">
                     {p.outputPerM === "—" || p.outputPerM === "N/A" || p.outputPerM === "Free" ? (
-                      <span style={{ color: "var(--muted)", fontStyle: "italic" }}>
+                      <span className="t-dash">
                         {p.outputPerM === "Free" ? "Free" : "—"}
                       </span>
                     ) : (
@@ -510,12 +510,77 @@ export default async function ModelPage({ params }: { params: Promise<{ slug: st
           <code>{model.apiExample}</code>
         </pre>
         {model.supported && (
-          <p style={{ fontSize: "0.9rem", marginTop: "0.5rem" }}>
+          <p className="article-note">
             See the <Link href="/docs">full API documentation</Link> for Python SDK, Node.js SDK,
             streaming, and error handling examples.
           </p>
         )}
       </section>
+
+      {/* Code examples — when provided */}
+      {model.codeExamples && model.codeExamples.length > 0 && (
+        <section className="article-section">
+          <h2>Code examples</h2>
+          <p>
+            {model.supported
+              ? `Ready-to-run ${model.name} snippets through the BestLLM OpenAI-compatible API. Export your API key and copy any block below.`
+              : `Ready-to-run ${model.name} snippets for the provider API shown above.`}
+          </p>
+          {model.codeExamples.map((ex) => (
+            <div key={ex.label}>
+              <h3>{ex.label}</h3>
+              <pre className="article-code">
+                <code>{ex.code}</code>
+              </pre>
+            </div>
+          ))}
+        </section>
+      )}
+
+      {/* Rate limits — when provided */}
+      {model.rateLimits && (
+        <section className="article-section">
+          <h2>Rate limits and concurrency</h2>
+          <p>{model.rateLimits.summary}</p>
+          <div className="article-table-wrap">
+            <table className="article-table">
+              <thead>
+                <tr>
+                  <th>Limit</th>
+                  <th>Value</th>
+                </tr>
+              </thead>
+              <tbody>
+                {model.rateLimits.rows.map((r) => (
+                  <tr key={r.label}>
+                    <td><strong>{r.label}</strong></td>
+                    <td>{r.value}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {model.rateLimits.notes && model.rateLimits.notes.length > 0 && (
+            <ul>
+              {model.rateLimits.notes.map((n) => (
+                <li key={n}>{n}</li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
+
+      {/* Billing & cost controls — when provided */}
+      {model.billing && model.billing.length > 0 && (
+        <section className="article-section">
+          <h2>Billing and cost controls</h2>
+          <ul>
+            {model.billing.map((b) => (
+              <li key={b}>{b}</li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {/* Comparison table — supported models only */}
       {model.supported && <ComparisonTable model={model} />}

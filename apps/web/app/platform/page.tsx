@@ -3,7 +3,7 @@ import { ContentCard, MarketingPage } from "../marketing-page";
 import { getSupportedModels } from "@gateway/brand/models";
 
 export const metadata = {
-  title: "LLM API Platform — OpenAI-Compatible Gateway Architecture | BestLLM",
+  title: { absolute: "LLM API Platform — OpenAI-Compatible Gateway Architecture | BestLLM" },
   description:
     "How the BestLLM OpenAI-compatible LLM API gateway works: one endpoint for DeepSeek, Qwen, Kimi, GLM, and MiniMax with regional routing, policy enforcement before dispatch, workspace isolation, and transparent per-token billing.",
 };

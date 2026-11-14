@@ -2,7 +2,23 @@ import { NextResponse } from "next/server";
 
 const isProduction = process.env.NODE_ENV === "production";
 
+// Consolidated / pruned model pages → their current canonical page (301).
+const MODEL_REDIRECTS: Record<string, string> = {
+  "/models/minimax-h3-max": "/models/minimax-h3",
+  "/models/qwen-max": "/models/qwen3-8-max",
+  "/models/kimi-k2": "/models/kimi-k3",
+  "/models/glm-4-plus": "/models/glm-5",
+  "/models/deepseek-v3": "/models/deepseek-chat",
+};
+
 export function middleware(request: Request) {
+  const url = new URL(request.url);
+  const target = MODEL_REDIRECTS[url.pathname.replace(/\/+$/, "")];
+  if (target) {
+    url.pathname = target;
+    return NextResponse.redirect(url, 301);
+  }
+
   const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
   const directives = [
     "default-src 'self'",

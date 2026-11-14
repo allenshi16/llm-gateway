@@ -34,6 +34,13 @@ export interface ModelPage {
   releaseDate?: string;
   docsUrl?: string;
   sourceUrl?: string;
+  rateLimits?: {
+    summary: string;
+    rows: { label: string; value: string }[];
+    notes?: string[];
+  };
+  billing?: string[];
+  codeExamples?: { label: string; code: string }[];
 }
 
 /* ------------------------------------------------------------------ */
@@ -77,6 +84,71 @@ const supportedModels: ModelPage[] = [
     releaseDate: "2025-01",
     docsUrl: "https://api-docs.deepseek.com/",
     sourceUrl: "https://github.com/deepseek-ai",
+    rateLimits: {
+      summary:
+        "BestLLM enforces workspace- and key-level limits by plan tier. DeepSeek itself limits by account-level concurrency — not RPM/TPM — so throughput depends on how long requests stay in flight.",
+      rows: [
+        { label: "BestLLM (routed)", value: "Per workspace + per API key, plan-tier defaults; HTTP 429 with Retry-After on exceed" },
+        { label: "DeepSeek direct · general route", value: "2,500 concurrent requests per account (deepseek-chat rides the v4.1-flash route)" },
+        { label: "Concurrency scope", value: "Account-level; every API key on the account shares one pool" },
+        { label: "What counts as concurrent", value: "From send until the response completes; streaming holds the slot for the whole stream" },
+        { label: "Over the limit", value: "HTTP 429; higher concurrency via support ticket at no extra fee" },
+      ],
+      notes: [
+        "DeepSeek publishes no RPM/TPM table: short requests yield far higher effective requests-per-second than long ones at the same concurrency cap.",
+        "Pass user_id to isolate content-safety, KV-cache and scheduling per end-user. Ordinary accounts pool all user_ids; upgraded accounts get per-user_id caps.",
+      ],
+    },
+    billing: [
+      "Per-token: $0.30 / M input, $1.19 / M output — cost pass-through with no markup.",
+      "Streaming and non-streaming bill identically: you pay for tokens generated, not connection time.",
+      "DeepSeek discounts cache-hit input on repeated prefixes; see the official pricing page for the current cache rate.",
+      "Every accepted request stores a versioned price snapshot; the immutable ledger is the billing source of truth.",
+      "Workspace spend controls and budgets cap exposure before dispatch; no per-request surcharge and no monthly minimum.",
+    ],
+    codeExamples: [
+      {
+        label: "Python (OpenAI SDK)",
+        code: `from openai import OpenAI
+
+client = OpenAI(
+    base_url="https://api.bestllm.dev/v1",
+    api_key="your-bestllm-api-key",
+)
+
+resp = client.chat.completions.create(
+    model="deepseek-chat",
+    messages=[{"role": "user", "content": "Refactor this function for readability."}],
+    temperature=0.7,
+)
+print(resp.choices[0].message.content)`,
+      },
+      {
+        label: "Node.js (OpenAI SDK)",
+        code: `import OpenAI from "openai";
+
+const client = new OpenAI({
+  baseURL: "https://api.bestllm.dev/v1",
+  apiKey: process.env.BESTLLM_API_KEY,
+});
+
+const resp = await client.chat.completions.create({
+  model: "deepseek-chat",
+  messages: [{ role: "user", content: "Write unit tests for this module." }],
+});
+console.log(resp.choices[0].message.content);`,
+      },
+      {
+        label: "Python streaming",
+        code: `stream = client.chat.completions.create(
+    model="deepseek-chat",
+    messages=[{"role": "user", "content": "Explain TCP backpressure."}],
+    stream=True,
+)
+for chunk in stream:
+    print(chunk.choices[0].delta.content or "", end="")`,
+      },
+    ],
   },
   {
     slug: "deepseek-reasoner",
@@ -112,6 +184,72 @@ const supportedModels: ModelPage[] = [
     benchmarkHighlight: "DeepSeek's V4 Pro reasoning tier — excels on AIME, MATH, and GPQA-style tasks with transparent reasoning chains.",
     releaseDate: "2025-01",
     docsUrl: "https://api-docs.deepseek.com/",
+    rateLimits: {
+      summary:
+        "BestLLM enforces workspace- and key-level limits by plan tier. DeepSeek Reasoner rides the v4-pro reasoning route, which has a lower account-level concurrency cap than the general route.",
+      rows: [
+        { label: "BestLLM (routed)", value: "Per workspace + per API key, plan-tier defaults; HTTP 429 with Retry-After on exceed" },
+        { label: "DeepSeek direct · reasoning route", value: "500 concurrent requests per account (deepseek-reasoner rides v4-pro)" },
+        { label: "Concurrency scope", value: "Account-level; every API key on the account shares one pool" },
+        { label: "Reasoning holds slots longer", value: "Extended chain-of-thought keeps a request in flight longer, so effective throughput is lower than the general route at the same cap" },
+        { label: "Over the limit", value: "HTTP 429; higher concurrency via support ticket at no extra fee" },
+      ],
+      notes: [
+        "No RPM/TPM table: plan capacity around in-flight reasoning requests, not requests-per-minute.",
+        "Pass user_id for per-end-user content-safety, KV-cache and scheduling isolation.",
+      ],
+    },
+    billing: [
+      "Per-token: $1.79 / M input, $3.57 / M output — cost pass-through with no markup.",
+      "Reasoning (chain-of-thought) tokens are billed as output tokens; deep deliberation costs more than a short answer.",
+      "1M context / 32K max output: long prompts dominate cost — trim context before escalating to Reasoner.",
+      "Every accepted request stores a versioned price snapshot; the immutable ledger is the billing source of truth.",
+      "Workspace spend controls and budgets cap exposure before dispatch; no per-request surcharge.",
+    ],
+    codeExamples: [
+      {
+        label: "Python (OpenAI SDK)",
+        code: `from openai import OpenAI
+
+client = OpenAI(
+    base_url="https://api.bestllm.dev/v1",
+    api_key="your-bestllm-api-key",
+)
+
+resp = client.chat.completions.create(
+    model="deepseek-reasoner",
+    messages=[{"role": "user", "content": "Prove that the square root of 2 is irrational."}],
+)
+print(resp.choices[0].message.content)`,
+      },
+      {
+        label: "Node.js (OpenAI SDK)",
+        code: `import OpenAI from "openai";
+
+const client = new OpenAI({
+  baseURL: "https://api.bestllm.dev/v1",
+  apiKey: process.env.BESTLLM_API_KEY,
+});
+
+const resp = await client.chat.completions.create({
+  model: "deepseek-reasoner",
+  messages: [{ role: "user", content: "Solve this system of equations step by step." }],
+});
+console.log(resp.choices[0].message.content);`,
+      },
+      {
+        label: "Python streaming (reasoning + answer)",
+        code: `stream = client.chat.completions.create(
+    model="deepseek-reasoner",
+    messages=[{"role": "user", "content": "Prove sqrt(2) is irrational."}],
+    stream=True,
+)
+for chunk in stream:
+    delta = chunk.choices[0].delta
+    # reasoning_content carries the chain-of-thought; content the final answer
+    print(getattr(delta, "reasoning_content", None) or delta.content or "", end="")`,
+      },
+    ],
   },
   {
     slug: "qwen3-8-max",
@@ -217,6 +355,75 @@ const supportedModels: ModelPage[] = [
     benchmarkHighlight: "#3 on the Artificial Analysis Intelligence Index (score 44) — comparable to Claude Opus 4.8 and GPT-5.5.",
     releaseDate: "2026-07",
     docsUrl: "https://platform.kimi.com/docs/pricing/chat",
+    rateLimits: {
+      summary:
+        "BestLLM enforces workspace- and key-level limits by plan tier. Moonshot tiers Kimi limits by cumulative account top-up across concurrency, RPM, TPM and TPD — shared across models at user level.",
+      rows: [
+        { label: "BestLLM (routed)", value: "Per workspace + per API key, plan-tier defaults; HTTP 429 with Retry-After on exceed" },
+        { label: "Tier 0 (¥0 top-up)", value: "1 concurrent · 3 RPM · 500K TPM · 1.5M TPD" },
+        { label: "Tier 1 (¥50)", value: "15 concurrent · 100 RPM · 2M TPM · unlimited TPD" },
+        { label: "Tier 2 (¥100)", value: "40 concurrent · 100 RPM · 3M TPM · unlimited TPD" },
+        { label: "Tier 3 (¥500)", value: "50 concurrent · 200 RPM · 3M TPM · unlimited TPD" },
+        { label: "Tier 4 (¥5,000)", value: "60 concurrent · 200 RPM · 4M TPM · unlimited TPD" },
+        { label: "Tier 5 (¥20,000)", value: "100 concurrent · 300 RPM · 5M TPM · unlimited TPD" },
+      ],
+      notes: [
+        "Limits are user-level (not per key) and shared across all Kimi models; whichever of concurrency / RPM / TPM / TPD hits first triggers 429.",
+        "Rate limiting reserves request tokens + max_completion_tokens, while billing charges request tokens + actually generated tokens. Set max_completion_tokens tightly so you don't reserve unused quota.",
+        "Responses expose X-RateLimit-Limit, X-RateLimit-Remaining and X-RateLimit-Reset headers.",
+      ],
+    },
+    billing: [
+      "Per-token via BestLLM: $2.98 / M input, $14.88 / M output — cost pass-through with no markup.",
+      "Moonshot direct reference: $3.00 / M input, $15.00 / M output, $0.30 / M cache-hit input.",
+      "Billing uses actually generated tokens; rate-limit reservation uses max_completion_tokens (see limits above).",
+      "Every accepted request stores a versioned price snapshot; the immutable ledger is the billing source of truth.",
+      "Workspace spend controls and budgets cap exposure before dispatch; no per-request surcharge.",
+    ],
+    codeExamples: [
+      {
+        label: "Python (OpenAI SDK)",
+        code: `from openai import OpenAI
+
+client = OpenAI(
+    base_url="https://api.bestllm.dev/v1",
+    api_key="your-bestllm-api-key",
+)
+
+resp = client.chat.completions.create(
+    model="kimi-k3",
+    messages=[{"role": "user", "content": "Analyze this codebase for security vulnerabilities."}],
+    max_completion_tokens=4096,
+)
+print(resp.choices[0].message.content)`,
+      },
+      {
+        label: "Node.js (OpenAI SDK)",
+        code: `import OpenAI from "openai";
+
+const client = new OpenAI({
+  baseURL: "https://api.bestllm.dev/v1",
+  apiKey: process.env.BESTLLM_API_KEY,
+});
+
+const resp = await client.chat.completions.create({
+  model: "kimi-k3",
+  messages: [{ role: "user", content: "Summarize this 1M-token document set." }],
+  max_completion_tokens: 4096,
+});
+console.log(resp.choices[0].message.content);`,
+      },
+      {
+        label: "Python streaming",
+        code: `stream = client.chat.completions.create(
+    model="kimi-k3",
+    messages=[{"role": "user", "content": "Draft an agentic tool-use plan."}],
+    stream=True,
+)
+for chunk in stream:
+    print(chunk.choices[0].delta.content or "", end="")`,
+      },
+    ],
   },
   {
     slug: "glm-5",
@@ -297,157 +504,22 @@ const supportedModels: ModelPage[] = [
 
 const editorialModels: ModelPage[] = [
   {
-    slug: "qwen-max",
-    name: "Qwen Max (2024)",
-    provider: "Alibaba Cloud",
-    providerSlug: "alibaba",
-    tagline: "Previous-generation Alibaba flagship — superseded by Qwen3.8 Max.",
-    description:
-      "Qwen Max was Alibaba Cloud's flagship large language model of the 2024–2025 generation. It has been superseded by Qwen3.8 Max (1M context, 2.4T-parameter MoE). This page is kept as a reference; for current workloads use Qwen3.8 Max or Qwen Plus through BestLLM.",
-    supported: false,
-    contextWindow: "128K",
-    maxOutput: "8K",
-    modalities: ["Text", "Image"],
-    pricing: [
-      { tier: "Input", inputPerM: "$1.60", outputPerM: "—" },
-      { tier: "Output", inputPerM: "—", outputPerM: "$6.40" },
-    ],
-    apiExample: `# Previous generation — see Qwen3.8 Max for the current flagship
-curl -X POST https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions \\
-  -H "Authorization: Bearer $DASHSCOPE_API_KEY" \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "model": "qwen-max",
-    "messages": [{"role": "user", "content": "Hello"}]
-  }'`,
-    features: [
-      "128K context window",
-      "Multilingual (29 languages)",
-      "Multimodal: text + image understanding",
-      "Superseded by Qwen3.8 Max",
-    ],
-    bestFor: "Legacy integrations; new projects should use Qwen3.8 Max.",
-    releaseDate: "2024-09",
-    docsUrl: "https://www.alibabacloud.com/help/en/model-studio/",
-  },
-  {
-    slug: "kimi-k2",
-    name: "Kimi K2 (2025)",
-    provider: "Moonshot AI",
-    providerSlug: "moonshot",
-    tagline: "Previous-gen long-context MoE — superseded by Kimi K3.",
-    description:
-      "Kimi K2 was Moonshot AI's 1-trillion-parameter (32B active) Mixture-of-Experts model released in mid-2025. It has been superseded by Kimi K3, which adds a 1M-token context and frontier reasoning. This page is kept as a reference; use Kimi K3 through BestLLM for current workloads.",
-    supported: false,
-    contextWindow: "128K",
-    maxOutput: "8K",
-    modalities: ["Text"],
-    pricing: [
-      { tier: "Input", inputPerM: "$0.60", outputPerM: "—" },
-      { tier: "Output", inputPerM: "—", outputPerM: "$1.80" },
-    ],
-    apiExample: `# Previous generation — see Kimi K3 for the current flagship
-curl -X POST https://api.moonshot.cn/v1/chat/completions \\
-  -H "Authorization: Bearer $MOONSHOT_API_KEY" \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "model": "kimi-k2",
-    "messages": [{"role": "user", "content": "Hello"}]
-  }'`,
-    features: [
-      "128K context window",
-      "1T total / 32B active parameters (MoE)",
-      "Strong agentic and tool-use performance",
-      "Superseded by Kimi K3",
-    ],
-    bestFor: "Legacy integrations; new projects should use Kimi K3.",
-    releaseDate: "2025-07",
-    docsUrl: "https://platform.kimi.com/docs/pricing/chat",
-  },
-  {
-    slug: "glm-4-plus",
-    name: "GLM-4 Plus (2024)",
-    provider: "Zhipu AI",
-    providerSlug: "zhipu",
-    tagline: "Previous-gen Zhipu flagship — superseded by GLM-5.",
-    description:
-      "GLM-4 Plus was Zhipu AI's flagship multimodal model of the 2024 generation. It has been superseded by the GLM-5 line (GLM-5 / GLM-5.3) with stronger coding, agentic tool use, and larger context. This page is kept as a reference; use GLM-5 through BestLLM for current workloads.",
-    supported: false,
-    contextWindow: "128K",
-    maxOutput: "4K",
-    modalities: ["Text", "Image"],
-    pricing: [
-      { tier: "Input", inputPerM: "$0.70", outputPerM: "—" },
-      { tier: "Output", inputPerM: "—", outputPerM: "$2.10" },
-    ],
-    apiExample: `# Previous generation — see GLM-5 for the current flagship
-curl -X POST https://open.bigmodel.cn/api/paas/v4/chat/completions \\
-  -H "Authorization: Bearer $ZHIPU_API_KEY" \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "model": "glm-4-plus",
-    "messages": [{"role": "user", "content": "Hello"}]
-  }'`,
-    features: [
-      "128K context window",
-      "Multimodal: text + image input",
-      "Strong Chinese-language performance",
-      "Superseded by GLM-5",
-    ],
-    bestFor: "Legacy integrations; new projects should use GLM-5.",
-    releaseDate: "2024-06",
-    sourceUrl: "https://github.com/THUDM",
-  },
-  {
-    slug: "deepseek-v3",
-    name: "DeepSeek V3",
-    provider: "DeepSeek",
-    providerSlug: "deepseek",
-    tagline: "The open-source model that changed the cost equation.",
-    description:
-      "DeepSeek V3 is the open-weight foundation that proved frontier performance doesn't require frontier pricing. With MoE architecture and 128K context, it remains the reference point for cost-effective open-source LLMs and the basis for the current DeepSeek Chat / Reasoner API models.",
-    supported: false,
-    contextWindow: "128K",
-    maxOutput: "8K",
-    modalities: ["Text"],
-    pricing: [
-      { tier: "Self-hosted", inputPerM: "Free", outputPerM: "Free" },
-      { tier: "DeepSeek API", inputPerM: "$0.30", outputPerM: "$1.19" },
-    ],
-    apiExample: `# Via DeepSeek API
-curl -X POST https://api.deepseek.com/chat/completions \\
-  -H "Authorization: Bearer $DEEPSEEK_API_KEY" \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "model": "deepseek-chat",
-    "messages": [{"role": "user", "content": "Hello"}]
-  }'`,
-    features: [
-      "128K context window",
-      "MoE architecture (efficient inference)",
-      "Open weights on Hugging Face",
-      "Competitive with GPT-4 class models",
-      "Aggressive pricing via DeepSeek API",
-    ],
-    bestFor: "Self-hosted deployments and cost-sensitive production use.",
-    releaseDate: "2024-12",
-    sourceUrl: "https://huggingface.co/deepseek-ai",
-  },
-  {
     slug: "minimax-h3",
     name: "MiniMax H3",
     provider: "MiniMax",
     providerSlug: "minimax",
     tagline: "Open-source omni-modal video generation with native audio.",
     description:
-      "MiniMax H3 is a general-purpose omni-modal generative system that creates 2K video with native stereo audio from text, image, video, and audio inputs. It features 33B dense architecture, open weights, and industry-leading price-performance for AI video generation. For text LLM workloads, see MiniMax M3.",
+      "MiniMax H3 is a general-purpose omni-modal generative system that creates 2K video with native stereo audio from text, image, video, and audio inputs. It features 33B dense architecture, open weights, and industry-leading price-performance for AI video generation. The fast H3 Max variant (MiniMax-H3-Max, 480P/768P, developed with fal.ai) runs on the same API and is consolidated on this page — see its tiers below. For text LLM workloads, see MiniMax M3.",
     supported: false,
     contextWindow: "N/A (video model)",
     maxOutput: "15 seconds video",
     modalities: ["Text", "Image", "Video", "Audio"],
     pricing: [
-      { tier: "2K Video", inputPerM: "—", outputPerM: "$0.13/sec" },
-      { tier: "768P Video", inputPerM: "—", outputPerM: "$0.08/sec" },
+      { tier: "H3 · 2K Video", inputPerM: "—", outputPerM: "$0.13/sec" },
+      { tier: "H3 · 768P Video", inputPerM: "—", outputPerM: "$0.08/sec" },
+      { tier: "H3 Max · 768P", inputPerM: "—", outputPerM: "$0.08/sec" },
+      { tier: "H3 Max · 480P", inputPerM: "—", outputPerM: "$0.05/sec" },
       { tier: "768P→2K Regen", inputPerM: "—", outputPerM: "$0.05/sec" },
       { tier: "Context-IR", inputPerM: "$0.90", outputPerM: "$3.60" },
     ],
@@ -456,9 +528,10 @@ curl -X POST https://api.deepseek.com/chat/completions \\
   -H "Content-Type: application/json" \\
   -d '{
     "model": "MiniMax-H3",
-    "prompt": "A sunrise over the Pacific Ocean, cinematic wide shot",
+    "content": [{ "type": "text", "text": "A sunrise over the Pacific Ocean, cinematic wide shot" }],
     "resolution": "2K",
-    "duration": 10
+    "duration": 10,
+    "ratio": "16:9"
   }'`,
     features: [
       "2K video with native stereo audio",
@@ -467,47 +540,100 @@ curl -X POST https://api.deepseek.com/chat/completions \\
       "Open weights (BF16) under Community License",
       "Supports 11 dialogue languages",
       "First-and-last-frame and reference-to-video modes",
+      "H3 Max variant (MiniMax-H3-Max): fast 480P/768P generation with image/video/audio references, same endpoint as H3",
+      "H3 Max prompt expansion modes: disabled / balanced / quality",
     ],
     bestFor: "AI video generation, creative content, marketing materials, and multimodal production pipelines.",
     benchmarkHighlight: "Price per second is less than 1/3 of comparable models at 2K resolution.",
     releaseDate: "2025-07",
+    rateLimits: {
+      summary:
+        "H3 is a provider-direct async video API (not routed by BestLLM). Submit a task, then poll or receive a callback; MiniMax enforces account-level rate limits and request payload caps.",
+      rows: [
+        { label: "Task model", value: "Async: POST /v2/video_generation → task_id → GET /v2/query/video_generation/{task_id}" },
+        { label: "Rate limit / balance", value: "HTTP 429 rate_limit_error (code 1002) on exceed; 402 insufficient_balance_error when balance runs out" },
+        { label: "Max request body", value: "64 MB total — use public URLs for large media (Base64 inflates size ~33%)" },
+        { label: "Image input", value: "≤30 MB each; reference images ≤9, first/last frame ≤1 each; 256–5760 px, aspect 0.4–2.5" },
+        { label: "Video input", value: "≤50 MB each; ≤3 clips, 2–15 s per clip, total ≤15 s (reference scenario only)" },
+        { label: "Audio input", value: "≤15 MB each; ≤3 clips, 2–15 s per clip, total ≤15 s (reference scenario only)" },
+        { label: "Prompt / callback", value: "Text prompt ≤7000 chars; callback_url challenge must be returned unchanged within 3 s" },
+      ],
+      notes: [
+        "Concurrency is account-tier based; exceeding it returns 429 — retry with backoff. Image-to-video and reference-to-video roles are mutually exclusive.",
+        "Task status values: queued, running, succeeded, failed, cancelled. Only tasks from the last 7 days are queryable; output URLs are time-limited, so download promptly.",
+        "H3 Max (MiniMax-H3-Max) supports 480P/768P only (no 2K) and 5–15 s duration; H3 supports 768P/2K and 4–15 s.",
+      ],
+    },
+    billing: [
+      "Per generated second (MiniMax pay-as-you-go, USD): H3 2K $0.13/s, H3 768P $0.08/s; H3 Max 768P $0.08/s, 480P $0.05/s; 768P→2K regeneration $0.05/s.",
+      "Input media is billed separately from output: reference video charged by duration at the selected output resolution (H3 2K $0.13/s, 768P $0.08/s; H3 Max 768P $0.143/s, 480P $0.0553/s).",
+      "Reference images: first 5 per task free on H3 (then $0.04 each); first 2 per task free on H3 Max (then $0.074 each). Audio input is free.",
+      "768P→2K regeneration is charged separately and re-bills the original task's input media (first 5 images free, video by original duration).",
+      "Context-IR prompt enhancement (MiniMax-H3-Context-IR): $0.90 / M input, $3.60 / M output tokens.",
+      "Provider-direct: charges deduct from your MiniMax account balance in USD; H3 video is not routed or billed by BestLLM.",
+    ],
+    codeExamples: [
+      {
+        label: "Python (submit + poll)",
+        code: `import os, time, requests
+
+BASE = "https://api.minimax.io/v2"
+HEADERS = {"Authorization": f"Bearer {os.environ['MINIMAX_API_KEY']}"}
+
+# 1. Submit an async text-to-video task (prompt goes in the content array)
+submit = requests.post(f"{BASE}/video_generation", headers=HEADERS, json={
+    "model": "MiniMax-H3",
+    "content": [{"type": "text", "text": "A sunrise over the Pacific, cinematic wide shot"}],
+    "resolution": "2K",
+    "duration": 10,
+    "ratio": "16:9",
+})
+task_id = submit.json()["task_id"]
+
+# 2. Poll until finished: queued / running / succeeded / failed / cancelled
+while True:
+    task = requests.get(f"{BASE}/query/video_generation/{task_id}", headers=HEADERS).json()["task"]
+    if task["status"] in ("succeeded", "failed", "cancelled"):
+        break
+    time.sleep(5)
+
+# Output URL is time-limited — download or store it promptly
+print(task["content"]["url"] if task["status"] == "succeeded" else task.get("error"))`,
+      },
+      {
+        label: "Node.js (H3 Max, fetch)",
+        code: `const BASE = "https://api.minimax.io/v2";
+const headers = {
+  Authorization: \`Bearer \${process.env.MINIMAX_API_KEY}\`,
+  "Content-Type": "application/json",
+};
+
+// H3 Max: fast 480P/768P variant — same endpoint, switch the model field
+const submit = await fetch(\`\${BASE}/video_generation\`, {
+  method: "POST",
+  headers,
+  body: JSON.stringify({
+    model: "MiniMax-H3-Max",
+    content: [{ type: "text", text: "A neon-lit Tokyo street in the rain" }],
+    resolution: "768P",
+    duration: 5,
+    ratio: "16:9",
+  }),
+}).then((r) => r.json());
+
+let task;
+do {
+  await new Promise((r) => setTimeout(r, 5000));
+  task = await fetch(\`\${BASE}/query/video_generation/\${submit.task_id}\`, { headers })
+    .then((r) => r.json())
+    .then((j) => j.task);
+} while (task.status === "queued" || task.status === "running");
+
+console.log(task.status === "succeeded" ? task.content.url : task.error);`,
+      },
+    ],
     docsUrl: "https://platform.minimax.io/docs/guides/pricing-paygo",
     sourceUrl: "https://huggingface.co/MiniMaxAI/MiniMax-H3",
-  },
-  {
-    slug: "minimax-h3-max",
-    name: "MiniMax H3 Max",
-    provider: "MiniMax (via fal.ai)",
-    providerSlug: "fal",
-    tagline: "Post-trained H3 variant optimized for speed and prompt adherence.",
-    description:
-      "MiniMax H3 Max is fal.ai's post-trained variant of MiniMax H3, optimized for stronger prompt adherence, better aesthetics, and faster inference. It generates 768P video with sub-3-second render times for 5-second clips. Currently available exclusively on fal.ai.",
-    supported: false,
-    contextWindow: "N/A (video model)",
-    maxOutput: "15 seconds video",
-    modalities: ["Text", "Image"],
-    pricing: [
-      { tier: "480P Video", inputPerM: "—", outputPerM: "$0.05/sec" },
-      { tier: "768P Video", inputPerM: "—", outputPerM: "$0.08/sec" },
-    ],
-    apiExample: `curl -X POST https://fal.ai/minimax-h3/max \\
-  -H "Authorization: Bearer $FAL_KEY" \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "model": "minimax/h3-max",
-    "prompt": "A cat astronaut floating in space, 16:9",
-    "duration": 5,
-    "resolution": "768p"
-  }'`,
-    features: [
-      "768P output optimized for speed",
-      "Sub-3-second render for 5-second clips",
-      "Stronger prompt adherence than base H3",
-      "5 free generations per day for signed-in users",
-      "Open weights planned by fal.ai",
-    ],
-    bestFor: "Rapid prototyping, high-volume video generation, and speed-critical creative workflows.",
-    releaseDate: "2025-08",
   },
 ];
 

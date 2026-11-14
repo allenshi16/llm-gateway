@@ -47,13 +47,13 @@ const articles = [
   },
   {
     slug: "/blog/minimax-h3",
-    title: "MiniMax H3 API: Complete Pricing & Integration Guide",
+    title: "MiniMax Models Tutorial: How to Choose & Integrate M3, H3, and H3 Max",
     description:
-      "Full pricing breakdown ($0.13/sec 2K, $0.08/sec 768P), architecture deep-dive, API integration examples, open-weight details, and comparison with Kling, Seedance, and Wan.",
-    date: "2026-09-03",
-    category: "Model Guide",
-    readTime: "8 min",
-    tags: ["MiniMax", "Video Generation", "API Pricing"],
+      "A decision framework plus copy-paste integration steps: M3 for text via BestLLM, H3 for 2K video via the MiniMax API, and H3 Max for fast prototyping via fal.ai — with cost controls and common pitfalls.",
+    date: "2026-11-14",
+    category: "Tutorial",
+    readTime: "9 min",
+    tags: ["MiniMax", "M3", "H3", "Integration"],
   },
   {
     slug: "/blog/what-is-jev-typesafe",
