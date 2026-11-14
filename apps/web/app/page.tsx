@@ -193,14 +193,15 @@ response = client.chat.completions.create(
           <span className="feature-number">vs</span>
           <h2>BestLLM vs calling DeepSeek, Qwen, or OpenRouter directly.</h2>
           <p>
-            Calling provider APIs directly works until you need more than one model, more than one
-            region, or more than one team on the same bill. BestLLM sits in front of every provider
-            and gives you a single OpenAI-compatible surface, unified billing across all models,
-            workspace-level spend controls, and the ability to approve or block model routes per
-            team. If you are already using OpenRouter, BestLLM adds regional policy enforcement,
-            provider-level fallback rules, and an immutable ledger that maps every request to a
-            line-item charge — not a monthly aggregate.{" "}
-            <Link href="/alternatives/openrouter">Read the full OpenRouter alternative guide →</Link>
+            One OpenAI-compatible surface instead of per-provider SDKs, accounts, and bills:
+            unified billing, workspace spend controls, and per-team model approval. Against
+            OpenRouter specifically, BestLLM adds US/EU regional policy, an append-only
+            per-request ledger, and no 5.5% credit top-up fee.
+          </p>
+          <p>
+            <Link className="text-link" href="/alternatives/openrouter">
+              OpenRouter alternative: full comparison, pricing & two-field migration →
+            </Link>
           </p>
         </Card>
         <Card>

@@ -177,6 +177,11 @@ export default function PricingPage() {
           price the gateway bills. There is no hidden markup layer between what providers charge
           and what you pay.
         </p>
+        <p>
+          Comparing against OpenRouter? BestLLM adds no credit top-up fee on top of token prices —
+          see the{" "}
+          <Link className="text-link" href="/alternatives/openrouter">OpenRouter vs BestLLM cost comparison</Link>.
+        </p>
       </div>
     </MarketingPage>
   );

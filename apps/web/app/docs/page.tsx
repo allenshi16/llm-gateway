@@ -159,6 +159,15 @@ console.log(response.choices[0].message.content);`}
         </pre>
       </ContentCard>
 
+      <ContentCard title="Migrating from OpenRouter">
+        Already on OpenRouter? Point <code>base_url</code> at <code>https://api.bestllm.dev/v1</code>{" "}
+        and drop the provider prefix from <code>model</code> (e.g. <code>deepseek/deepseek-chat</code>{" "}
+        → <code>deepseek-chat</code>); everything else stays the same.{" "}
+        <Link className="text-link" href="/alternatives/openrouter">
+          OpenRouter alternative: comparison, pricing & migration →
+        </Link>
+      </ContentCard>
+
       <ContentCard title="Available Models">
         <p>
           The following models are live and accessible through the BestLLM API. Use the model
