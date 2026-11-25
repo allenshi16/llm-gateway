@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { brand, publicNavigation } from "@gateway/brand";
-import { Badge, Button, Card, Logo } from "@gateway/ui";
+import { Badge, Card, Logo } from "@gateway/ui";
 import { consoleLogInUrl } from "../lib/console-url";
 import { modelCatalog } from "@gateway/brand/models";
 
@@ -26,7 +26,7 @@ export default async function HomePage() {
         </div>
         <div className="marketing-actions">
           <Link href={signInUrl}>Sign in</Link>
-          <Button>Start building</Button>
+          <Link className="ui-button ui-button-solid" href="/docs/deepseek-chat-api">Start building</Link>
         </div>
       </nav>
 
@@ -40,11 +40,11 @@ export default async function HomePage() {
             DeepSeek, Qwen, Kimi, GLM, and MiniMax through a single endpoint. Switch models by
             changing the <code>model</code> field — no SDK changes, no new dependencies, no
             provider accounts to manage. Ship with predictable per-token pricing, region-aware
-            routing across US and EU, workspace-level spend controls, and an immutable billing
+            routing for approved US-scoped requests, workspace-level spend controls, and an immutable billing
             ledger that finance can reconcile.
           </p>
           <div className="hero-actions">
-            <Button>Get your API key</Button>
+            <Link className="ui-button ui-button-solid" href={signInUrl}>Get your API key</Link>
             <Link className="text-link" href="/platform">Explore the platform →</Link>
           </div>
           <div className="hero-proof">
@@ -86,7 +86,7 @@ export default async function HomePage() {
           <h2>Spend you can explain to finance.</h2>
           <p>
             Every request carries a transparent per-token charge. Reservations, captures, and
-            releases keep real-time cost accurate even during streaming. Price snapshots record
+            releases track charges for non-streaming requests. Price snapshots record
             exactly what each request cost at dispatch time. Append-only ledger entries mean your
             invoices reconcile to the token — no black-box markup, no surprise overages.
           </p>
@@ -112,8 +112,8 @@ export default async function HomePage() {
               Your integration uses the OpenAI SDK format. To switch from DeepSeek Chat to Qwen3.8
               Max, change the <code>model</code> parameter. That is the entire migration. No new
               libraries, no provider accounts, no separate billing relationships. Every model behind
-              the BestLLM gateway speaks the same API surface — chat completions, streaming,
-              function calling — with consistent error codes and response shapes.
+              the BestLLM gateway uses the non-streaming chat completions endpoint. Check
+              workspace access and model-specific capabilities before switching.
             </p>
           </div>
           <pre style={{
@@ -195,7 +195,7 @@ response = client.chat.completions.create(
           <p>
             One OpenAI-compatible surface instead of per-provider SDKs, accounts, and bills:
             unified billing, workspace spend controls, and per-team model approval. Against
-            OpenRouter specifically, BestLLM adds US/EU regional policy, an append-only
+            OpenRouter specifically, BestLLM applies route approval policies, an append-only
             per-request ledger, and no 5.5% credit top-up fee.
           </p>
           <p>
@@ -218,13 +218,13 @@ response = client.chat.completions.create(
         </Card>
         <Card>
           <span className="feature-number">05</span>
-          <h2>Regional routing for US and EU compliance.</h2>
+          <h2>Explicit route approval and region checks.</h2>
           <p>
-            Every model route through BestLLM carries explicit regional policy. Requests are
+            The current gateway accepts US-scoped keys only; non-US keys are rejected.
+            Every model route carries explicit approval requirements. Requests are
             dispatched to approved regions only — no cross-region fallback unless your workspace
-            policy allows it. This matters for teams handling EU data residency requirements, US
-            export controls, or internal compliance frameworks that require knowing where inference
-            happens. Regional policy is configured at the workspace level and enforced before a
+            policy allows it. These checks do not independently establish a provider’s physical data
+            residency or satisfy a particular compliance framework. Regional policy is configured at the workspace level and enforced before a
             request leaves your boundary.
           </p>
         </Card>
@@ -242,9 +242,9 @@ response = client.chat.completions.create(
             <p style={{ padding: "0.5rem 0", color: "#555" }}>
               BestLLM implements the same request and response format as the OpenAI Chat
               Completions API. You can use the official OpenAI SDK (Python, Node.js, TypeScript)
-              with only the base URL and API key changed. Streaming, function calling, tool use,
-              and response formats all follow the OpenAI convention. If your code already calls
-              OpenAI, switching to BestLLM means changing two lines: the base URL and the key.
+              for non-streaming text chat with an approved model alias. Streaming is not
+              implemented; other features require model-specific validation. See the
+              quickstart for the current request scope.
             </p>
           </details>
 
@@ -253,10 +253,10 @@ response = client.chat.completions.create(
               Which models are available today?
             </summary>
             <p style={{ padding: "0.5rem 0", color: "#555" }}>
-              Seven models are live and routable through BestLLM: DeepSeek Chat, DeepSeek
+              The public catalog describes seven model aliases: DeepSeek Chat, DeepSeek
               Reasoner, Qwen3.8 Max, Qwen Plus, Kimi K3, GLM-5, and MiniMax M3. Each model has
               its own pricing page with full specs, context window details, and API examples. We
-              add new models as they reach production stability — check the{" "}
+              enable routes per workspace after approval — check your Console and the{" "}
               <Link href="/models">models page</Link> for the current list.
             </p>
           </details>
@@ -283,9 +283,9 @@ response = client.chat.completions.create(
             <p style={{ padding: "0.5rem 0", color: "#555" }}>
               Yes. BestLLM speaks the OpenAI API format. In the official OpenAI Python or
               Node.js SDK, set the base URL to <code>https://api.bestllm.dev/v1</code> and use
-              your BestLLM API key. Everything else — message format, streaming, function
-              calling, error codes — works the same way. No new libraries, no adapter layer,
-              no code rewrite beyond the two configuration values.
+              your BestLLM API key. Use non-streaming chat completions, select an approved
+              model, and handle gateway-specific error codes. This is not a claim of full
+              OpenAI API compatibility.
             </p>
           </details>
 
@@ -296,7 +296,7 @@ response = client.chat.completions.create(
             <p style={{ padding: "0.5rem 0", color: "#555" }}>
               Both provide multi-model API access through a single endpoint. BestLLM focuses on
               the Chinese and Asian model ecosystem (DeepSeek, Qwen, Kimi, GLM, MiniMax) with
-              US and EU regional routing, workspace-level spend controls, RBAC, and an immutable
+              US-scoped request routing, workspace-level spend controls, RBAC, and an immutable
               billing ledger. OpenRouter covers a broader global model catalog. If your workload
               is primarily DeepSeek, Qwen, Kimi, or GLM and you need compliance-aware routing
               and team-level budget controls, BestLLM is purpose-built for that use case.{" "}
@@ -312,8 +312,8 @@ response = client.chat.completions.create(
               Sign up, create a workspace, generate an API key from the Console, and make your
               first call to <code>https://api.bestllm.dev/v1/chat/completions</code>. The{" "}
               <Link href="/docs">quickstart guide</Link> walks through the full setup including
-              SDK configuration, model selection, and streaming. Most integrations are live
-              within five minutes.
+              SDK configuration, model access checks, and non-streaming requests.
+              Availability depends on your workspace and approved routes.
             </p>
           </details>
         </div>

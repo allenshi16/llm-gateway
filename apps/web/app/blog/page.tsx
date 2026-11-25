@@ -16,6 +16,15 @@ export const metadata: Metadata = {
 
 const articles = [
   {
+    slug: "/blog/openai-compatible-client-errors",
+    title: "OpenAI-Compatible Python Client: BestLLM Setup & API Errors",
+    description: "A non-streaming DeepSeek Chat walkthrough with workspace access checks, bounded requests, and safe handling of gateway errors.",
+    date: "2026-11-24",
+    category: "Tutorial",
+    readTime: "6 min",
+    tags: ["OpenAI SDK", "DeepSeek", "API Errors"],
+  },
+  {
     slug: "/blog/best-chinese-models-2026",
     title: "Best Chinese AI Models 2026: DeepSeek, Qwen, Kimi, GLM Comparison",
     description:

@@ -256,3 +256,11 @@ html { scroll-behavior:smooth; }
 .article-faq details { margin-bottom:1rem; }
 .article-faq summary { cursor:pointer; font-weight:600; padding:.5rem 0; }
 .article-faq details p { padding:.5rem 0; color:var(--muted); line-height:1.7; }
+
+/* Integration guides: keep runnable examples readable on narrow screens. */
+.integration-guide-wide { grid-column: 1 / -1; min-width: 0; }
+.integration-guide-code { max-width: 100%; overflow-x: auto; padding: 1rem; background: var(--panel); font-size: .85rem; line-height: 1.65; }
+.integration-guide-table { overflow-x: auto; }
+.integration-guide-table table { width: 100%; border-collapse: collapse; text-align: left; }
+.integration-guide-table th, .integration-guide-table td { padding: .75rem; border-bottom: 1px solid var(--line); vertical-align: top; line-height: 1.6; }
+.integration-guide-table caption { text-align: left; margin-bottom: .75rem; }
