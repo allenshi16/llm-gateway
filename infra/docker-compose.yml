@@ -34,7 +34,13 @@ services:
     command: ["--config", "/app/config.yaml", "--port", "4302"]
     environment:
       LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:-local-disabled-litellm-key}
-      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:?DEEPSEEK_API_KEY required for provider routes}
+      # Upstream is an OpenAI-compatible aggregator (see infra/litellm/config.yaml).
+      QNAIGC_BASE_URL: ${QNAIGC_BASE_URL:?QNAIGC_BASE_URL required for provider routes}
+      QNAIGC_API_KEY: ${QNAIGC_API_KEY:?QNAIGC_API_KEY required for provider routes}
+      # CRITICAL: never pass DATABASE_URL to LiteLLM. Its bundled Prisma would run
+      # migrations against the authoritative gateway Postgres and wipe our schema.
+      # This proxy is stateless (spend/error logs disabled); it must have no DB.
+      STORE_MODEL_IN_DB: "False"
     volumes:
       - ./litellm/config.yaml:/app/config.yaml:ro
 

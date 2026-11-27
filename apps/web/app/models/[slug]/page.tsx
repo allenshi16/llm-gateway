@@ -376,6 +376,23 @@ function ModelFaq({ model }: { model: ModelPage }) {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Dedicated integration guides by model slug                         */
+/* ------------------------------------------------------------------ */
+
+const guideBySlug: Record<string, { href: string; buttonLabel: string; inlineLabel: string }> = {
+  "deepseek-chat": {
+    href: "/docs/deepseek-chat-api",
+    buttonLabel: "DeepSeek Setup Guide →",
+    inlineLabel: "DeepSeek Chat API setup guide",
+  },
+  "glm-5": {
+    href: "/docs/glm-5-api",
+    buttonLabel: "GLM-5 Setup Guide →",
+    inlineLabel: "GLM-5 API setup guide",
+  },
+};
+
+/* ------------------------------------------------------------------ */
 /*  Page component                                                     */
 /* ------------------------------------------------------------------ */
 
@@ -383,6 +400,7 @@ export default async function ModelPage({ params }: { params: Promise<{ slug: st
   const { slug } = await params;
   const model = getModelBySlug(slug);
   if (!model) notFound();
+  const guide = guideBySlug[model.slug];
 
   return (
     <main className="marketing-shell">
@@ -410,6 +428,11 @@ export default async function ModelPage({ params }: { params: Promise<{ slug: st
             <Link href="/pricing" className="article-btn article-btn-primary">
               Get API Key →
             </Link>
+            {guide && (
+              <Link href={guide.href} className="article-btn">
+                {guide.buttonLabel}
+              </Link>
+            )}
             <Link href="/docs" className="article-btn">
               Read the Docs →
             </Link>
@@ -511,8 +534,16 @@ export default async function ModelPage({ params }: { params: Promise<{ slug: st
         </pre>
         {model.supported && (
           <p className="article-note">
-            See the <Link href="/docs">full API documentation</Link> for Python SDK, Node.js SDK,
-            streaming, and error handling examples.
+            {guide ? (
+              <>
+                Follow the <Link href={guide.href}>{guide.inlineLabel}</Link> for non-streaming{" "}
+                <code>curl</code> and Python SDK setup, or see the{" "}
+              </>
+            ) : (
+              "See the "
+            )}
+            <Link href="/docs">full API documentation</Link> for workspace prerequisites and error
+            handling.
           </p>
         )}
       </section>
